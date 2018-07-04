@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/Tanibox/tania-core/src/assets/domain"
+	"github.com/Tanibox/tania-core/src/assets/server/nodered"
 	"github.com/Tanibox/tania-core/src/assets/storage"
 	"github.com/labstack/gommon/log"
 )
@@ -553,6 +554,48 @@ func (s *FarmServer) SaveToMaterialReadModel(event interface{}) error {
 	}
 
 	err := <-s.MaterialReadRepo.Save(materialRead)
+	if err != nil {
+		log.Error(err)
+	}
+
+	return nil
+}
+
+func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
+	deviceRead := &storage.DeviceRead{}
+
+	switch e := event.(type) {
+	case domain.DeviceCreated:
+		deviceRead.DeviceID = e.DeviceID
+		deviceRead.Name = e.Name
+		deviceRead.TopicName = e.TopicName
+		deviceRead.Status = e.Status
+		deviceRead.CreatedDate = e.CreatedDate
+
+	}
+
+	err := <-s.DeviceReadRepo.Save(deviceRead)
+	if err != nil {
+		log.Error(err)
+	}
+
+	return nil
+}
+
+func (s *FarmServer) GenerateNodeRed(event interface{}) error {
+	deviceRead := &storage.DeviceRead{}
+
+	switch e := event.(type) {
+	case domain.DeviceCreated:
+		deviceRead.DeviceID = e.DeviceID
+		deviceRead.Name = e.Name
+		deviceRead.TopicName = e.TopicName
+		deviceRead.Status = e.Status
+		deviceRead.CreatedDate = e.CreatedDate
+
+	}
+
+	err := nodered.Update(deviceRead)
 	if err != nil {
 		log.Error(err)
 	}

@@ -51,6 +51,15 @@ type MaterialReadQuery interface {
 	FindByID(materialUID uuid.UUID) <-chan QueryResult
 }
 
+type DeviceEventQuery interface {
+	FindAllByID(DeviceID string) <-chan QueryResult
+}
+
+type DeviceReadQuery interface {
+	FindAll() <-chan QueryResult
+	FindByID(deviceID string) <-chan QueryResult
+}
+
 type QueryResult struct {
 	Result interface{}
 	Error  error

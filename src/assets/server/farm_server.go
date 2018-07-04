@@ -49,6 +49,11 @@ type FarmServer struct {
 	MaterialEventQuery  query.MaterialEventQuery
 	MaterialReadRepo    repository.MaterialReadRepository
 	MaterialReadQuery   query.MaterialReadQuery
+	DeviceEventRepo     repository.DeviceEventRepository
+	DeviceEventQuery    query.DeviceEventQuery
+	DeviceReadRepo      repository.DeviceReadRepository
+	DeviceReadQuery     query.DeviceReadQuery
+	DeviceService       domain.DeviceService
 	CropReadQuery       query.CropReadQuery
 	File                File
 	EventBus            eventbus.TaniaEventBus
@@ -163,6 +168,11 @@ func NewFarmServer(
 		farmServer.MaterialReadRepo = repoMysql.NewMaterialReadRepositoryMysql(db)
 		farmServer.MaterialReadQuery = queryMysql.NewMaterialReadQueryMysql(db)
 
+		farmServer.DeviceEventRepo = repoMysql.NewDeviceEventRepositoryMysql(db)
+		farmServer.DeviceEventQuery = queryMysql.NewDeviceEventQueryMysql(db)
+		farmServer.DeviceReadRepo = repoMysql.NewDeviceReadRepositoryMysql(db)
+		farmServer.DeviceReadQuery = queryMysql.NewDeviceReadQueryMysql(db)
+
 		farmServer.CropReadQuery = queryMysql.NewCropReadQueryMysql(db)
 
 		// TODO: AreaServiceInMemory should be renamed. It doesn't need InMemory name
@@ -174,6 +184,10 @@ func NewFarmServer(
 		// TODO: ReservoirServiceInMemory should be renamed. It doesn't need InMemory name
 		farmServer.ReservoirService = service.ReservoirServiceInMemory{
 			FarmReadQuery: farmServer.FarmReadQuery,
+		}
+
+		farmServer.DeviceService = service.DeviceService{
+			DeviceReadQuery: farmServer.DeviceReadQuery,
 		}
 	}
 
@@ -215,6 +229,9 @@ func (s *FarmServer) InitSubscriber() {
 	s.EventBus.Subscribe("MaterialNotesChanged", s.SaveToMaterialReadModel)
 	s.EventBus.Subscribe("MaterialProducedByChanged", s.SaveToMaterialReadModel)
 
+	s.EventBus.Subscribe("DeviceCreated", s.SaveToDeviceReadModel)
+	s.EventBus.Subscribe("DeviceCreated", s.GenerateNodeRed)
+
 }
 
 // Mount defines the FarmServer's endpoints with its handlers
@@ -248,6 +265,10 @@ func (s *FarmServer) Mount(g *echo.Group) {
 	g.GET("/:id/areas", s.GetFarmAreas)
 	g.GET("/:farm_id/areas/:area_id", s.GetAreasByID)
 	g.GET("/:farm_id/areas/:area_id/photos", s.GetAreaPhotos)
+
+	g.POST("/devices", s.SaveDevice)
+	g.GET("/devices", s.GetDevices)
+	g.GET("/devices/:id", s.GetDeviceByID)
 }
 
 // GetTypes is a FarmServer's handle to get farm types
@@ -1684,6 +1705,53 @@ func (s *FarmServer) GetAvailableMaterialPlantType(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
+func (s *FarmServer) SaveDevice(c echo.Context) error {
+	// Validate requests //
+	deviceID := c.FormValue("device_id")
+	name := c.FormValue("name")
+
+	// Process //
+	d, err := domain.CreateDevice(s.DeviceService, deviceID, name)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Persists //
+	err = <-s.DeviceEventRepo.Save(d.DeviceID, d.Version, d.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Publish //
+	s.publishUncommittedEvents(d)
+
+	data := make(map[string]interface{})
+	data["data"] = d
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *FarmServer) GetDevices(c echo.Context) error {
+	queryResult := <-s.DeviceReadQuery.FindAll()
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	results, ok := queryResult.Result.([]storage.DeviceRead)
+	if !ok {
+		return Error(c, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error"))
+	}
+
+	data := make(map[string]interface{})
+	data["data"] = results
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *FarmServer) GetDeviceByID(c echo.Context) error {
+	return nil
+}
+
 func (s *FarmServer) publishUncommittedEvents(entity interface{}) error {
 	switch e := entity.(type) {
 	case *domain.Farm:
@@ -1702,6 +1770,11 @@ func (s *FarmServer) publishUncommittedEvents(entity interface{}) error {
 			s.EventBus.Publish(name, v)
 		}
 	case *domain.Material:
+		for _, v := range e.UncommittedChanges {
+			name := structhelper.GetName(v)
+			s.EventBus.Publish(name, v)
+		}
+	case *domain.Device:
 		for _, v := range e.UncommittedChanges {
 			name := structhelper.GetName(v)
 			s.EventBus.Publish(name, v)

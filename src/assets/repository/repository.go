@@ -89,3 +89,20 @@ func (w MaterialEventTypeWrapper) Code() string {
 type MaterialReadRepository interface {
 	Save(materialRead *storage.MaterialRead) <-chan error
 }
+
+type DeviceEventRepository interface {
+	Save(deviceID string, latestVersion int, events []interface{}) <-chan error
+}
+
+func NewDeviceFromHistory(events []storage.DeviceEvent) *domain.Device {
+	state := &domain.Device{}
+	for _, v := range events {
+		state.Transition(v.Event)
+		state.Version++
+	}
+	return state
+}
+
+type DeviceReadRepository interface {
+	Save(deviceRead *storage.DeviceRead) <-chan error
+}

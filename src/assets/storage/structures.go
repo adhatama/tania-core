@@ -178,3 +178,18 @@ type Inventory struct {
 	PlantType string    `json:"plant_type"`
 	Name      string    `json:"name"`
 }
+
+type DeviceEvent struct {
+	DeviceID    string
+	Version     int
+	CreatedDate time.Time
+	Event       interface{}
+}
+
+type DeviceRead struct {
+	DeviceID    string    `json:"id"`
+	Name        string    `json:"name"`
+	TopicName   string    `json:"topic_name"`
+	Status      string    `json:"status"`
+	CreatedDate time.Time `json:"created_date"`
+}
