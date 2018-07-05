@@ -566,10 +566,12 @@ func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
 
 	switch e := event.(type) {
 	case domain.DeviceCreated:
+		deviceRead.UID = e.UID
 		deviceRead.DeviceID = e.DeviceID
 		deviceRead.Name = e.Name
 		deviceRead.TopicName = e.TopicName
 		deviceRead.Status = e.Status
+		deviceRead.Description = e.Description
 		deviceRead.CreatedDate = e.CreatedDate
 
 	}
@@ -587,10 +589,12 @@ func (s *FarmServer) GenerateNodeRed(event interface{}) error {
 
 	switch e := event.(type) {
 	case domain.DeviceCreated:
+		deviceRead.UID = e.UID
 		deviceRead.DeviceID = e.DeviceID
 		deviceRead.Name = e.Name
 		deviceRead.TopicName = e.TopicName
 		deviceRead.Status = e.Status
+		deviceRead.Description = e.Description
 		deviceRead.CreatedDate = e.CreatedDate
 
 	}

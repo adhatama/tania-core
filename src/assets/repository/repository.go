@@ -91,7 +91,7 @@ type MaterialReadRepository interface {
 }
 
 type DeviceEventRepository interface {
-	Save(deviceID string, latestVersion int, events []interface{}) <-chan error
+	Save(deviceUID uuid.UUID, latestVersion int, events []interface{}) <-chan error
 }
 
 func NewDeviceFromHistory(events []storage.DeviceEvent) *domain.Device {

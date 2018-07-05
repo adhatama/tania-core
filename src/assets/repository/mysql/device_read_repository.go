@@ -20,18 +20,18 @@ func (f *DeviceReadRepositoryMysql) Save(deviceRead *storage.DeviceRead) <-chan 
 
 	go func() {
 		count := 0
-		err := f.DB.QueryRow(`SELECT COUNT(*) FROM DEVICE_READ WHERE ID = ?`, deviceRead.DeviceID).Scan(&count)
+		err := f.DB.QueryRow(`SELECT COUNT(*) FROM DEVICE_READ WHERE UID = ?`, deviceRead.UID.Bytes()).Scan(&count)
 		if err != nil {
 			result <- err
 		}
 
 		if count > 0 {
 			_, err := f.DB.Exec(`UPDATE DEVICE_READ SET
-				ID = ?, NAME = ?, TOPIC_NAME = ?, STATUS = ?, CREATED_DATE = ?
-				WHERE ID = ?`,
+				DEVICE_ID = ?, NAME = ?, TOPIC_NAME = ?, STATUS = ?, DESCRIPTION = ?, CREATED_DATE = ?
+				WHERE UID = ?`,
 				deviceRead.DeviceID, deviceRead.Name, deviceRead.TopicName, deviceRead.Status,
-				deviceRead.CreatedDate,
-				deviceRead.DeviceID,
+				deviceRead.Description, deviceRead.CreatedDate,
+				deviceRead.UID.Bytes(),
 			)
 
 			if err != nil {
@@ -39,10 +39,10 @@ func (f *DeviceReadRepositoryMysql) Save(deviceRead *storage.DeviceRead) <-chan 
 			}
 		} else {
 			_, err := f.DB.Exec(`INSERT INTO DEVICE_READ
-				(ID, NAME, TOPIC_NAME, STATUS, CREATED_DATE)
-				VALUES (?, ?, ?, ?, ?)`,
-				deviceRead.DeviceID, deviceRead.Name, deviceRead.TopicName, deviceRead.Status,
-				deviceRead.CreatedDate,
+				(UID, DEVICE_ID, NAME, TOPIC_NAME, STATUS, DESCRIPTION, CREATED_DATE)
+				VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				deviceRead.UID.Bytes(), deviceRead.DeviceID, deviceRead.Name, deviceRead.TopicName,
+				deviceRead.Status, deviceRead.Description, deviceRead.CreatedDate,
 			)
 
 			if err != nil {

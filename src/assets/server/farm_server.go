@@ -1719,15 +1719,16 @@ func (s *FarmServer) SaveDevice(c echo.Context) error {
 	// Validate requests //
 	deviceID := c.FormValue("device_id")
 	name := c.FormValue("name")
+	description := c.FormValue("description")
 
 	// Process //
-	d, err := domain.CreateDevice(s.DeviceService, deviceID, name)
+	d, err := domain.CreateDevice(s.DeviceService, deviceID, name, description)
 	if err != nil {
 		return Error(c, err)
 	}
 
 	// Persists //
-	err = <-s.DeviceEventRepo.Save(d.DeviceID, d.Version, d.UncommittedChanges)
+	err = <-s.DeviceEventRepo.Save(d.UID, d.Version, d.UncommittedChanges)
 	if err != nil {
 		return Error(c, err)
 	}
@@ -1759,7 +1760,12 @@ func (s *FarmServer) GetDevices(c echo.Context) error {
 }
 
 func (s *FarmServer) GetDeviceByID(c echo.Context) error {
-	queryResult := <-s.DeviceReadQuery.FindByID(c.Param("id"))
+	deviceUID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	queryResult := <-s.DeviceReadQuery.FindByID(deviceUID)
 	if queryResult.Error != nil {
 		return Error(c, queryResult.Error)
 	}
@@ -1769,7 +1775,7 @@ func (s *FarmServer) GetDeviceByID(c echo.Context) error {
 		return Error(c, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error"))
 	}
 
-	if device.DeviceID == "" {
+	if device.UID == (uuid.UUID{}) {
 		return Error(c, NewRequestValidationError(NOT_FOUND, "id"))
 	}
 

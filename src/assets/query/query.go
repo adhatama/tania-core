@@ -52,12 +52,12 @@ type MaterialReadQuery interface {
 }
 
 type DeviceEventQuery interface {
-	FindAllByID(DeviceID string) <-chan QueryResult
+	FindAllByID(deviceUID uuid.UUID) <-chan QueryResult
 }
 
 type DeviceReadQuery interface {
 	FindAll() <-chan QueryResult
-	FindByID(deviceID string) <-chan QueryResult
+	FindByID(deviceUID uuid.UUID) <-chan QueryResult
 }
 
 type QueryResult struct {

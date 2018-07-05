@@ -180,16 +180,18 @@ type Inventory struct {
 }
 
 type DeviceEvent struct {
-	DeviceID    string
+	DeviceUID   uuid.UUID
 	Version     int
 	CreatedDate time.Time
 	Event       interface{}
 }
 
 type DeviceRead struct {
-	DeviceID    string    `json:"id"`
+	UID         uuid.UUID `json:"uid"`
+	DeviceID    string    `json:"device_id"`
 	Name        string    `json:"name"`
 	TopicName   string    `json:"topic_name"`
 	Status      string    `json:"status"`
+	Description string    `json:"description"`
 	CreatedDate time.Time `json:"created_date"`
 }

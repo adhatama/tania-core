@@ -1,12 +1,18 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	uuid "github.com/satori/go.uuid"
+)
 
 type Device struct {
+	UID         uuid.UUID
 	DeviceID    string
 	Name        string
 	TopicName   string
 	Status      string
+	Description string
 	CreatedDate time.Time
 
 	// Events
@@ -15,7 +21,7 @@ type Device struct {
 }
 
 type DeviceService interface {
-	FindByID(deviceID string) (DeviceServiceResult, error)
+	FindByID(deviceUID uuid.UUID) (DeviceServiceResult, error)
 }
 
 type DeviceServiceResult struct {
@@ -36,32 +42,43 @@ func (state *Device) TrackChange(event interface{}) {
 func (state *Device) Transition(event interface{}) {
 	switch e := event.(type) {
 	case DeviceCreated:
+		state.UID = e.UID
 		state.DeviceID = e.DeviceID
 		state.Name = e.Name
 		state.TopicName = e.TopicName
 		state.Status = e.Status
+		state.Description = e.Description
 		state.CreatedDate = e.CreatedDate
 
 	}
 }
 
-func CreateDevice(deviceService DeviceService, deviceID, name string) (*Device, error) {
+func CreateDevice(deviceService DeviceService, deviceID, name, description string) (*Device, error) {
 	// validate device ID, name
 
 	// create topic name
 	topicName := "topic-" + deviceID
 
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	device := &Device{
-		DeviceID: deviceID,
-		Name:     name,
-		Status:   DeviceMetadataCreated,
+		UID:         uid,
+		DeviceID:    deviceID,
+		Name:        name,
+		Description: description,
+		Status:      DeviceMetadataCreated,
 	}
 
 	device.TrackChange(DeviceCreated{
+		UID:         device.UID,
 		DeviceID:    device.DeviceID,
 		Name:        device.Name,
 		TopicName:   topicName,
 		Status:      device.Status,
+		Description: device.Description,
 		CreatedDate: time.Now(),
 	})
 
