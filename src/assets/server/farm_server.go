@@ -2,12 +2,15 @@ package server
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Tanibox/tania-core/config"
+	"github.com/Tanibox/tania-core/proto"
 	"github.com/Tanibox/tania-core/src/assets/domain"
 	"github.com/Tanibox/tania-core/src/assets/domain/service"
 	"github.com/Tanibox/tania-core/src/assets/query"
@@ -25,8 +28,11 @@ import (
 	"github.com/Tanibox/tania-core/src/helper/paginationhelper"
 	"github.com/Tanibox/tania-core/src/helper/stringhelper"
 	"github.com/Tanibox/tania-core/src/helper/structhelper"
+	"github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	uuid "github.com/satori/go.uuid"
+
+	protobuf "github.com/golang/protobuf/proto"
 )
 
 // FarmServer ties the routes and handlers with injected dependencies
@@ -269,6 +275,10 @@ func (s *FarmServer) Mount(g *echo.Group) {
 	g.POST("/devices", s.SaveDevice)
 	g.GET("/devices", s.GetDevices)
 	g.GET("/devices/:id", s.GetDeviceByID)
+	g.PUT("/devices/:id", s.UpdateDevice)
+	g.DELETE("/devices/:id", s.RemoveDevice)
+
+	g.GET("/devices/ws/sensor", s.WebsocketReceiveDeviceData)
 }
 
 // GetTypes is a FarmServer's handle to get farm types
@@ -1749,7 +1759,55 @@ func (s *FarmServer) GetDevices(c echo.Context) error {
 }
 
 func (s *FarmServer) GetDeviceByID(c echo.Context) error {
+	queryResult := <-s.DeviceReadQuery.FindByID(c.Param("id"))
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	device, ok := queryResult.Result.(storage.DeviceRead)
+	if !ok {
+		return Error(c, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error"))
+	}
+
+	if device.DeviceID == "" {
+		return Error(c, NewRequestValidationError(NOT_FOUND, "id"))
+	}
+
+	data := make(map[string]interface{})
+	data["data"] = device
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *FarmServer) UpdateDevice(c echo.Context) error {
 	return nil
+}
+
+func (s *FarmServer) RemoveDevice(c echo.Context) error {
+	return nil
+}
+
+func (s *FarmServer) WebsocketReceiveDeviceData(c echo.Context) error {
+	var upgrader = websocket.Upgrader{}
+	ws, err := upgrader.Upgrade(c.Response().Writer, c.Request(), nil)
+	if err != nil {
+		return err
+	}
+	defer ws.Close()
+
+	for {
+		_, msg, err := ws.ReadMessage()
+		if err != nil {
+			c.Logger().Error(err)
+		}
+
+		m := &proto.SensorData{}
+		if err := protobuf.Unmarshal(msg, m); err != nil {
+			log.Fatalln("Failed to parse data:", err)
+		}
+
+		fmt.Printf("websocket: %s\n", m)
+	}
 }
 
 func (s *FarmServer) publishUncommittedEvents(entity interface{}) error {
