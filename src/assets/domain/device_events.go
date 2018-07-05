@@ -15,3 +15,19 @@ type DeviceCreated struct {
 	Description string
 	CreatedDate time.Time
 }
+
+type DeviceIDChanged struct {
+	UID       uuid.UUID
+	DeviceID  string
+	TopicName string
+}
+
+type DeviceNameChanged struct {
+	UID  uuid.UUID
+	Name string
+}
+
+type DeviceDescriptionChanged struct {
+	UID         uuid.UUID
+	Description string
+}

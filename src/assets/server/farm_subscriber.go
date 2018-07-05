@@ -574,6 +574,52 @@ func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
 		deviceRead.Description = e.Description
 		deviceRead.CreatedDate = e.CreatedDate
 
+	case domain.DeviceIDChanged:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
+		deviceRead.DeviceID = e.DeviceID
+		deviceRead.TopicName = e.TopicName
+
+	case domain.DeviceNameChanged:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
+		deviceRead.Name = e.Name
+
+	case domain.DeviceDescriptionChanged:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
+		deviceRead.Description = e.Description
+
 	}
 
 	err := <-s.DeviceReadRepo.Save(deviceRead)

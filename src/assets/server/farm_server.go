@@ -237,6 +237,9 @@ func (s *FarmServer) InitSubscriber() {
 
 	s.EventBus.Subscribe("DeviceCreated", s.SaveToDeviceReadModel)
 	s.EventBus.Subscribe("DeviceCreated", s.GenerateNodeRed)
+	s.EventBus.Subscribe("DeviceIDChanged", s.SaveToDeviceReadModel)
+	s.EventBus.Subscribe("DeviceNameChanged", s.SaveToDeviceReadModel)
+	s.EventBus.Subscribe("DeviceDescriptionChanged", s.SaveToDeviceReadModel)
 
 }
 
@@ -1786,7 +1789,75 @@ func (s *FarmServer) GetDeviceByID(c echo.Context) error {
 }
 
 func (s *FarmServer) UpdateDevice(c echo.Context) error {
-	return nil
+	deviceUID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	deviceID := c.FormValue("device_id")
+	name := c.FormValue("name")
+	description := c.FormValue("description")
+
+	// Validate //
+	queryResult := <-s.DeviceReadQuery.FindByID(deviceUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	deviceRead, ok := queryResult.Result.(storage.DeviceRead)
+	if !ok {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	if deviceRead.UID == (uuid.UUID{}) {
+		return Error(c, NewRequestValidationError(NOT_FOUND, "id"))
+	}
+
+	// Process //
+	queryResult = <-s.DeviceEventQuery.FindAllByID(deviceUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	events, ok := queryResult.Result.([]storage.DeviceEvent)
+	if !ok {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	device := repository.NewDeviceFromHistory(events)
+
+	if deviceID != "" {
+		err = device.ChangeID(deviceID)
+		if err != nil {
+			return Error(c, err)
+		}
+	}
+
+	if name != "" {
+		err = device.ChangeName(name)
+		if err != nil {
+			return Error(c, err)
+		}
+	}
+
+	if description != "" {
+		err = device.ChangeDescription(description)
+		if err != nil {
+			return Error(c, err)
+		}
+	}
+
+	err = <-s.DeviceEventRepo.Save(device.UID, device.Version, device.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(device)
+
+	data := make(map[string]interface{})
+	data["data"] = device
+
+	return c.JSON(http.StatusOK, data)
 }
 
 func (s *FarmServer) RemoveDevice(c echo.Context) error {

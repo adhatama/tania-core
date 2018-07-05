@@ -50,6 +50,19 @@ func (state *Device) Transition(event interface{}) {
 		state.Description = e.Description
 		state.CreatedDate = e.CreatedDate
 
+	case DeviceIDChanged:
+		state.UID = e.UID
+		state.DeviceID = e.DeviceID
+		state.TopicName = e.TopicName
+
+	case DeviceNameChanged:
+		state.UID = e.UID
+		state.Name = e.Name
+
+	case DeviceDescriptionChanged:
+		state.UID = e.UID
+		state.Description = e.Description
+
 	}
 }
 
@@ -90,7 +103,11 @@ func (d *Device) ChangeID(newDeviceID string) error {
 
 	// create topic name
 
-	d.DeviceID = newDeviceID
+	d.TrackChange(DeviceIDChanged{
+		UID:       d.UID,
+		DeviceID:  newDeviceID,
+		TopicName: d.TopicName,
+	})
 
 	return nil
 }
@@ -98,15 +115,21 @@ func (d *Device) ChangeID(newDeviceID string) error {
 func (d *Device) ChangeName(name string) error {
 	// validate name
 
-	d.Name = name
+	d.TrackChange(DeviceNameChanged{
+		UID:  d.UID,
+		Name: name,
+	})
 
 	return nil
 }
 
-func (d *Device) ChangeStatus(status string) error {
-	// validate status
+func (d *Device) ChangeDescription(description string) error {
+	// validate description
 
-	d.Status = status
+	d.TrackChange(DeviceDescriptionChanged{
+		UID:         d.UID,
+		Description: description,
+	})
 
 	return nil
 }
