@@ -88,11 +88,11 @@ const initialTemplate = `
         "wires": []
     },
     {
-        "id": "main-flow-1-mqtt-my-second-topic",
+        "id": "main-flow-1-mqtt-test-topic",
         "type": "mqtt in",
         "z": "main-flow-1",
         "name": "",
-        "topic": "my-second-topic",
+        "topic": "test-topic",
         "qos": "0",
         "broker": "main-flow-1-mqtt-broker",
         "x": 150,
@@ -103,22 +103,6 @@ const initialTemplate = `
             ]
         ]
 	},
-	{
-        "id": "main-flow-1-mqtt-my-third-topic",
-        "type": "mqtt in",
-        "z": "main-flow-1",
-        "name": "",
-        "topic": "my-third-topic",
-        "qos": "0",
-        "broker": "main-flow-1-mqtt-broker",
-        "x": 150,
-        "y": 225,
-        "wires": [
-            [
-                "main-flow-1-websocket-out"
-            ]
-        ]
-    },
     {
         "id": "main-flow-1-websocket-out",
         "type": "websocket out",
