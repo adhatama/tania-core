@@ -236,10 +236,14 @@ func (s *FarmServer) InitSubscriber() {
 	s.EventBus.Subscribe("MaterialProducedByChanged", s.SaveToMaterialReadModel)
 
 	s.EventBus.Subscribe("DeviceCreated", s.SaveToDeviceReadModel)
-	s.EventBus.Subscribe("DeviceCreated", s.GenerateNodeRed)
 	s.EventBus.Subscribe("DeviceIDChanged", s.SaveToDeviceReadModel)
 	s.EventBus.Subscribe("DeviceNameChanged", s.SaveToDeviceReadModel)
 	s.EventBus.Subscribe("DeviceDescriptionChanged", s.SaveToDeviceReadModel)
+	s.EventBus.Subscribe("DeviceRemoved", s.SaveToDeviceReadModel)
+
+	s.EventBus.Subscribe("DeviceCreated", s.GenerateNodeRed)
+	s.EventBus.Subscribe("DeviceIDChanged", s.GenerateNodeRed)
+	s.EventBus.Subscribe("DeviceRemoved", s.GenerateNodeRed)
 
 }
 
@@ -1861,7 +1865,52 @@ func (s *FarmServer) UpdateDevice(c echo.Context) error {
 }
 
 func (s *FarmServer) RemoveDevice(c echo.Context) error {
-	return nil
+	deviceUID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Validate //
+	queryResult := <-s.DeviceReadQuery.FindByID(deviceUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	deviceRead, ok := queryResult.Result.(storage.DeviceRead)
+	if !ok {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	if deviceRead.UID == (uuid.UUID{}) {
+		return Error(c, NewRequestValidationError(NOT_FOUND, "id"))
+	}
+
+	// Process //
+	queryResult = <-s.DeviceEventQuery.FindAllByID(deviceUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	events, ok := queryResult.Result.([]storage.DeviceEvent)
+	if !ok {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Internal server error")
+	}
+
+	device := repository.NewDeviceFromHistory(events)
+
+	device.Remove()
+
+	err = <-s.DeviceEventRepo.Save(device.UID, device.Version, device.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(device)
+
+	data := make(map[string]interface{})
+	data["data"] = device
+
+	return c.JSON(http.StatusOK, data)
 }
 
 func (s *FarmServer) WebsocketReceiveDeviceData(c echo.Context) error {

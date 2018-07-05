@@ -17,9 +17,10 @@ type DeviceCreated struct {
 }
 
 type DeviceIDChanged struct {
-	UID       uuid.UUID
-	DeviceID  string
-	TopicName string
+	UID          uuid.UUID
+	LastDeviceID string
+	NewDeviceID  string
+	TopicName    string
 }
 
 type DeviceNameChanged struct {
@@ -30,4 +31,9 @@ type DeviceNameChanged struct {
 type DeviceDescriptionChanged struct {
 	UID         uuid.UUID
 	Description string
+}
+
+type DeviceRemoved struct {
+	UID    uuid.UUID
+	Status string
 }

@@ -29,9 +29,10 @@ type DeviceServiceResult struct {
 }
 
 const (
-	DeviceMetadataCreated = "METADATA_CREATED"
-	DeviceMetadataUpdated = "METADATA_UPDATED"
-	DeviceNodeRedCreated  = "NODERED_CREATED"
+	DeviceStatusMetadataCreated = "METADATA_CREATED"
+	DeviceStatusMetadataUpdated = "METADATA_UPDATED"
+	DeviceStatusNodeRedCreated  = "NODERED_CREATED"
+	DeviceStatusRemoved         = "REMOVED"
 )
 
 func (state *Device) TrackChange(event interface{}) {
@@ -52,7 +53,7 @@ func (state *Device) Transition(event interface{}) {
 
 	case DeviceIDChanged:
 		state.UID = e.UID
-		state.DeviceID = e.DeviceID
+		state.DeviceID = e.NewDeviceID
 		state.TopicName = e.TopicName
 
 	case DeviceNameChanged:
@@ -62,6 +63,10 @@ func (state *Device) Transition(event interface{}) {
 	case DeviceDescriptionChanged:
 		state.UID = e.UID
 		state.Description = e.Description
+
+	case DeviceRemoved:
+		state.UID = e.UID
+		state.Status = e.Status
 
 	}
 }
@@ -82,7 +87,7 @@ func CreateDevice(deviceService DeviceService, deviceID, name, description strin
 		DeviceID:    deviceID,
 		Name:        name,
 		Description: description,
-		Status:      DeviceMetadataCreated,
+		Status:      DeviceStatusMetadataCreated,
 	}
 
 	device.TrackChange(DeviceCreated{
@@ -102,11 +107,13 @@ func (d *Device) ChangeID(newDeviceID string) error {
 	// validate new device ID
 
 	// create topic name
+	newTopicName := "topic-" + newDeviceID
 
 	d.TrackChange(DeviceIDChanged{
-		UID:       d.UID,
-		DeviceID:  newDeviceID,
-		TopicName: d.TopicName,
+		UID:          d.UID,
+		LastDeviceID: d.DeviceID,
+		NewDeviceID:  newDeviceID,
+		TopicName:    newTopicName,
 	})
 
 	return nil
@@ -129,6 +136,17 @@ func (d *Device) ChangeDescription(description string) error {
 	d.TrackChange(DeviceDescriptionChanged{
 		UID:         d.UID,
 		Description: description,
+	})
+
+	return nil
+}
+
+func (d *Device) Remove() error {
+	// validate description
+
+	d.TrackChange(DeviceRemoved{
+		UID:    d.UID,
+		Status: DeviceStatusRemoved,
 	})
 
 	return nil

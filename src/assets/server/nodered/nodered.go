@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/Tanibox/tania-core/config"
+	"github.com/Tanibox/tania-core/src/assets/domain"
 	"github.com/Tanibox/tania-core/src/assets/storage"
 )
 
@@ -117,7 +117,8 @@ const initialTemplate = `
 ]
 `
 
-func Update(device *storage.DeviceRead) error {
+func Update(device *storage.DeviceRead, lastDeviceID string) error {
+	// Prepare the new node struct
 	newTopicNode := struct {
 		ID     string     `json:"id"`
 		Type   string     `json:"type"`
@@ -146,6 +147,7 @@ func Update(device *storage.DeviceRead) error {
 		return err
 	}
 
+	// Call nodered API to get existing flow nodes
 	var client = &http.Client{
 		Timeout: time.Second * 10,
 	}
@@ -163,7 +165,7 @@ func Update(device *storage.DeviceRead) error {
 		return err
 	}
 
-	// If no `id: main-flow-1` node, then just override the flow with initial template
+	// If no `id: main-flow-1` node in existing flow, then just override the flow with initial template
 	shouldOverride := true
 	for _, v := range existingBodyMap {
 		if v["id"] == "main-flow-1" {
@@ -200,7 +202,6 @@ func Update(device *storage.DeviceRead) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(tmplData)
 
 		newFlow = t.Bytes()
 	} else {
@@ -215,15 +216,33 @@ func Update(device *storage.DeviceRead) error {
 		}
 
 		isAlreadyExists := false
+		removedChangedNodeIndex := -1
 		for i, v := range existingBodyMap {
 			if v["id"] == newNodeMap["id"] {
 				isAlreadyExists = true
 				existingBodyMap[i] = newNodeMap
 			}
+
+			// Need to remove the last changed node because it has been changed with the new node
+			if v["id"] == lastDeviceID && newNodeMap["id"] != lastDeviceID {
+				removedChangedNodeIndex = i
+			}
+
+			// Need to remove the node because the device data has been removed
+			if device.Status == domain.DeviceStatusRemoved && v["id"] == newNodeMap["id"] {
+				removedChangedNodeIndex = i
+			}
 		}
 
 		if !isAlreadyExists {
 			existingBodyMap = append(existingBodyMap, newNodeMap)
+		}
+
+		if removedChangedNodeIndex != -1 {
+			// Technique from here https://github.com/golang/go/wiki/SliceTricks
+			existingBodyMap[removedChangedNodeIndex] = existingBodyMap[len(existingBodyMap)-1]
+			existingBodyMap[len(existingBodyMap)-1] = nil
+			existingBodyMap = existingBodyMap[:len(existingBodyMap)-1]
 		}
 
 		newFlow, err = json.Marshal(existingBodyMap)

@@ -587,7 +587,7 @@ func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
 
 		deviceRead = &device
 
-		deviceRead.DeviceID = e.DeviceID
+		deviceRead.DeviceID = e.NewDeviceID
 		deviceRead.TopicName = e.TopicName
 
 	case domain.DeviceNameChanged:
@@ -620,6 +620,21 @@ func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
 
 		deviceRead.Description = e.Description
 
+	case domain.DeviceRemoved:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
+		deviceRead.Status = e.Status
+
 	}
 
 	err := <-s.DeviceReadRepo.Save(deviceRead)
@@ -632,6 +647,7 @@ func (s *FarmServer) SaveToDeviceReadModel(event interface{}) error {
 
 func (s *FarmServer) GenerateNodeRed(event interface{}) error {
 	deviceRead := &storage.DeviceRead{}
+	var lastDeviceID string
 
 	switch e := event.(type) {
 	case domain.DeviceCreated:
@@ -643,9 +659,39 @@ func (s *FarmServer) GenerateNodeRed(event interface{}) error {
 		deviceRead.Description = e.Description
 		deviceRead.CreatedDate = e.CreatedDate
 
+	case domain.DeviceIDChanged:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
+		deviceRead.DeviceID = e.NewDeviceID
+		deviceRead.TopicName = e.TopicName
+		lastDeviceID = e.LastDeviceID
+
+	case domain.DeviceRemoved:
+		queryResult := <-s.DeviceReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		device, ok := queryResult.Result.(storage.DeviceRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		deviceRead = &device
+
 	}
 
-	err := nodered.Update(deviceRead)
+	err := nodered.Update(deviceRead, lastDeviceID)
 	if err != nil {
 		log.Error(err)
 	}
