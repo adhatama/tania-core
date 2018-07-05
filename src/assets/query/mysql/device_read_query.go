@@ -31,7 +31,7 @@ func (s DeviceReadQueryMysql) FindByID(deviceID string) <-chan query.QueryResult
 		deviceRead := storage.DeviceRead{}
 		rowsData := deviceReadResult{}
 
-		err := s.DB.QueryRow("SELECT * FROM DEVICE_READ WHERE DEVICE_ID = ?", deviceID).Scan(
+		err := s.DB.QueryRow("SELECT * FROM DEVICE_READ WHERE ID = ?", deviceID).Scan(
 			&rowsData.DeviceID,
 			&rowsData.Name,
 			&rowsData.TopicName,
