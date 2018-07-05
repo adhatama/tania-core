@@ -31,6 +31,7 @@ func (f *DeviceReadRepositoryMysql) Save(deviceRead *storage.DeviceRead) <-chan 
 				WHERE ID = ?`,
 				deviceRead.DeviceID, deviceRead.Name, deviceRead.TopicName, deviceRead.Status,
 				deviceRead.CreatedDate,
+				deviceRead.DeviceID,
 			)
 
 			if err != nil {
