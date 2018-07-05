@@ -4,14 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
 	"time"
 
+	"github.com/Tanibox/tania-core/config"
 	"github.com/Tanibox/tania-core/src/assets/storage"
 )
 
+// We use JSON value in this initial template because it is easier.
+// We don't need to make a struct for every possible node in node-red.
 const initialTemplate = `
 [
     {
@@ -47,7 +51,7 @@ const initialTemplate = `
         "id": "main-flow-1-websocket-client",
         "type": "websocket-client",
         "z": "main-flow-1",
-        "path": "{{.WebsocketClientPath}}",
+        "path": "{{.WebsocketConnectTo}}",
         "tls": "",
         "wholemsg": "false"
     },
@@ -162,21 +166,30 @@ func Update(device *storage.DeviceRead) error {
 		Timeout: time.Second * 10,
 	}
 
-	resp, err := client.Get("http://localhost:1880/flows")
+	resp, err := client.Get(*config.Config.NodeRedHost + ":" + *config.Config.NodeRedPort + "/flows")
 	if err != nil {
 		return err
 	}
 
 	defer resp.Body.Close()
 
-	bodyJSON := make([]map[string]interface{}, 0)
-	err = json.NewDecoder(resp.Body).Decode(&bodyJSON)
+	existingBodyMap := make([]map[string]interface{}, 0)
+	err = json.NewDecoder(resp.Body).Decode(&existingBodyMap)
 	if err != nil {
 		return err
 	}
 
+	// If no `id: main-flow-1` node, then just override the flow with initial template
+	shouldOverride := true
+	for _, v := range existingBodyMap {
+		if v["id"] == "main-flow-1" {
+			shouldOverride = false
+			break
+		}
+	}
+
 	var newFlow []byte
-	if len(bodyJSON) == 0 {
+	if shouldOverride {
 		// Generate new nodered flows
 
 		tmpl, err := template.New("template").Parse(initialTemplate)
@@ -185,16 +198,16 @@ func Update(device *storage.DeviceRead) error {
 		}
 
 		tmplData := struct {
-			MQTTBrokerHost      string
-			MQTTBrokerPort      string
-			MQTTBrokerWsPort    string
-			WebsocketClientPath string
-			NewNode             template.HTML
+			MQTTBrokerHost     string
+			MQTTBrokerPort     string
+			MQTTBrokerWsPort   string
+			WebsocketConnectTo string
+			NewNode            template.HTML
 		}{
-			"localhost",
-			"1883",
-			"8080",
-			"ws://localhost:8080/ws/test/heru",
+			*config.Config.MqttBrokerHost,
+			*config.Config.MqttBrokerPort,
+			*config.Config.MqttBrokerWsHost,
+			*config.Config.WebsocketSensorConnectTo,
 			"," + template.HTML(newTopicMarshalled),
 		}
 
@@ -203,10 +216,13 @@ func Update(device *storage.DeviceRead) error {
 		if err != nil {
 			return err
 		}
+		fmt.Println(tmplData)
 
 		newFlow = t.Bytes()
 	} else {
 		// Use existing nodered flows
+		// If new node id is already exists, then just update it,
+		// otherwise we just append that new node to the existing flows
 
 		var newNodeMap map[string]interface{}
 		err = json.Unmarshal(newTopicMarshalled, &newNodeMap)
@@ -214,15 +230,36 @@ func Update(device *storage.DeviceRead) error {
 			return err
 		}
 
-		bodyJSON = append(bodyJSON, newNodeMap)
+		isAlreadyExists := false
+		for i, v := range existingBodyMap {
+			if v["id"] == newNodeMap["id"] {
+				isAlreadyExists = true
+				existingBodyMap[i] = newNodeMap
+			}
+		}
 
-		newFlow, err = json.Marshal(bodyJSON)
+		if !isAlreadyExists {
+			existingBodyMap = append(existingBodyMap, newNodeMap)
+		}
+
+		newFlow, err = json.Marshal(existingBodyMap)
 		if err != nil {
 			return err
 		}
 	}
 
-	postResp, err := client.Post("http://localhost:1880/flows", "application/json", bytes.NewBuffer(newFlow))
+	req, err := http.NewRequest(
+		"POST",
+		*config.Config.NodeRedHost+":"+*config.Config.NodeRedPort+"/flows",
+		bytes.NewBuffer(newFlow),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Node-RED-Deployment-Type", "nodes")
+
+	postResp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

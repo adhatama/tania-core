@@ -203,18 +203,24 @@ func initConfig() {
 	conf := configure.New()
 
 	configuration := config.Configuration{
-		UploadPathArea:         conf.String("upload_path_area", "tania-uploads/area", "Upload path for the Area photo"),
-		UploadPathCrop:         conf.String("upload_path_crop", "tania-uploads/crop", "Upload path for the Crop photo"),
-		DemoMode:               conf.Bool("demo_mode", true, "Switch for the demo mode"),
-		TaniaPersistenceEngine: conf.String("tania_persistence_engine", "sqlite", "The persistance engine of Tania. Options are inmemory, sqlite, inmemory"),
-		SqlitePath:             conf.String("sqlite_path", "tania.db", "Path of sqlite file db"),
-		MysqlHost:              conf.String("mysql_host", "127.0.0.1", "Mysql Host"),
-		MysqlPort:              conf.String("mysql_port", "3306", "Mysql Port"),
-		MysqlDbname:            conf.String("mysql_dbname", "tania", "Mysql DBName"),
-		MysqlUsername:          conf.String("mysql_username", "root", "Mysql username"),
-		MysqlPassword:          conf.String("mysql_password", "root", "Mysql password"),
-		RedirectURI:            conf.String("redirect_uri", "http://localhost:8080/oauth2_implicit_callback", "URI for redirection after authorization server grants access token"),
-		ClientID:               conf.String("client_id", "f0ece679-3f53-463e-b624-73e83049d6ac", "OAuth2 Implicit Grant Client ID for frontend"),
+		UploadPathArea:           conf.String("upload_path_area", "tania-uploads/area", "Upload path for the Area photo"),
+		UploadPathCrop:           conf.String("upload_path_crop", "tania-uploads/crop", "Upload path for the Crop photo"),
+		DemoMode:                 conf.Bool("demo_mode", true, "Switch for the demo mode"),
+		TaniaPersistenceEngine:   conf.String("tania_persistence_engine", "sqlite", "The persistance engine of Tania. Options are inmemory, sqlite, inmemory"),
+		SqlitePath:               conf.String("sqlite_path", "tania.db", "Path of sqlite file db"),
+		MysqlHost:                conf.String("mysql_host", "127.0.0.1", "Mysql Host"),
+		MysqlPort:                conf.String("mysql_port", "3306", "Mysql Port"),
+		MysqlDbname:              conf.String("mysql_dbname", "tania", "Mysql DBName"),
+		MysqlUsername:            conf.String("mysql_username", "root", "Mysql username"),
+		MysqlPassword:            conf.String("mysql_password", "root", "Mysql password"),
+		RedirectURI:              conf.String("redirect_uri", "http://localhost:8080/oauth2_implicit_callback", "URI for redirection after authorization server grants access token"),
+		ClientID:                 conf.String("client_id", "f0ece679-3f53-463e-b624-73e83049d6ac", "OAuth2 Implicit Grant Client ID for frontend"),
+		NodeRedHost:              conf.String("node_red_host", "localhost", "Node-RED server hostname"),
+		NodeRedPort:              conf.String("node_red_port", "1880", "Node-RED server port"),
+		MqttBrokerHost:           conf.String("mqtt_broker_host", "localhost", "MQTT broker server hostname"),
+		MqttBrokerPort:           conf.String("mqtt_broker_port", "1883", "MQTT broker server port"),
+		MqttBrokerWsHost:         conf.String("mqtt_broker_ws_port", "1993", "MQTT broker server port for websocket"),
+		WebsocketSensorConnectTo: conf.String("websocket_sensor_connect_to", "ws://localhost:8080/api/farms/devices/ws/sensor", "Websocket path to send sensor data to Tania"),
 	}
 
 	// This config will read the first configuration.

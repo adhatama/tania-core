@@ -9,16 +9,22 @@ const (
 )
 
 type Configuration struct {
-	DemoMode               *bool
-	UploadPathArea         *string
-	UploadPathCrop         *string
-	TaniaPersistenceEngine *string
-	SqlitePath             *string
-	MysqlHost              *string
-	MysqlPort              *string
-	MysqlDbname            *string
-	MysqlUsername          *string
-	MysqlPassword          *string
-	RedirectURI            *string
-	ClientID               *string
+	DemoMode                 *bool
+	UploadPathArea           *string
+	UploadPathCrop           *string
+	TaniaPersistenceEngine   *string
+	SqlitePath               *string
+	MysqlHost                *string
+	MysqlPort                *string
+	MysqlDbname              *string
+	MysqlUsername            *string
+	MysqlPassword            *string
+	RedirectURI              *string
+	ClientID                 *string
+	NodeRedHost              *string
+	NodeRedPort              *string
+	MqttBrokerHost           *string
+	MqttBrokerPort           *string
+	MqttBrokerWsHost         *string
+	WebsocketSensorConnectTo *string
 }
