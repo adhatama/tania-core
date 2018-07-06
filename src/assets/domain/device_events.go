@@ -33,6 +33,11 @@ type DeviceDescriptionChanged struct {
 	Description string
 }
 
+type DeviceStatusChanged struct {
+	UID    uuid.UUID
+	Status string
+}
+
 type DeviceRemoved struct {
 	UID    uuid.UUID
 	Status string

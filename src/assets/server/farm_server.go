@@ -21,6 +21,7 @@ import (
 	repoInMem "github.com/Tanibox/tania-core/src/assets/repository/inmemory"
 	repoMysql "github.com/Tanibox/tania-core/src/assets/repository/mysql"
 	repoSqlite "github.com/Tanibox/tania-core/src/assets/repository/sqlite"
+	"github.com/Tanibox/tania-core/src/assets/server/nodered"
 	"github.com/Tanibox/tania-core/src/assets/storage"
 	"github.com/Tanibox/tania-core/src/eventbus"
 	growthstorage "github.com/Tanibox/tania-core/src/growth/storage"
@@ -240,11 +241,6 @@ func (s *FarmServer) InitSubscriber() {
 	s.EventBus.Subscribe("DeviceNameChanged", s.SaveToDeviceReadModel)
 	s.EventBus.Subscribe("DeviceDescriptionChanged", s.SaveToDeviceReadModel)
 	s.EventBus.Subscribe("DeviceRemoved", s.SaveToDeviceReadModel)
-
-	s.EventBus.Subscribe("DeviceCreated", s.GenerateNodeRed)
-	s.EventBus.Subscribe("DeviceIDChanged", s.GenerateNodeRed)
-	s.EventBus.Subscribe("DeviceRemoved", s.GenerateNodeRed)
-
 }
 
 // Mount defines the FarmServer's endpoints with its handlers
@@ -1734,6 +1730,29 @@ func (s *FarmServer) SaveDevice(c echo.Context) error {
 		return Error(c, err)
 	}
 
+	// Update nodered
+	deviceRead := &storage.DeviceRead{
+		UID:         d.UID,
+		DeviceID:    d.DeviceID,
+		Name:        d.Name,
+		TopicName:   d.TopicName,
+		Status:      d.Status,
+		Description: d.Description,
+		CreatedDate: d.CreatedDate,
+	}
+
+	err = nodered.Update(deviceRead, "")
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = d.ChangeStatus(domain.DeviceStatusNodeRedCreated)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	deviceRead.Status = d.Status
+
 	// Persists //
 	err = <-s.DeviceEventRepo.Save(d.UID, d.Version, d.UncommittedChanges)
 	if err != nil {
@@ -1744,7 +1763,7 @@ func (s *FarmServer) SaveDevice(c echo.Context) error {
 	s.publishUncommittedEvents(d)
 
 	data := make(map[string]interface{})
-	data["data"] = d
+	data["data"] = deviceRead
 
 	return c.JSON(http.StatusOK, data)
 }

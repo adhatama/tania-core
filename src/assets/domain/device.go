@@ -64,6 +64,10 @@ func (state *Device) Transition(event interface{}) {
 		state.UID = e.UID
 		state.Description = e.Description
 
+	case DeviceStatusChanged:
+		state.UID = e.UID
+		state.Status = e.Status
+
 	case DeviceRemoved:
 		state.UID = e.UID
 		state.Status = e.Status
@@ -136,6 +140,15 @@ func (d *Device) ChangeDescription(description string) error {
 	d.TrackChange(DeviceDescriptionChanged{
 		UID:         d.UID,
 		Description: description,
+	})
+
+	return nil
+}
+
+func (d *Device) ChangeStatus(status string) error {
+	d.TrackChange(DeviceStatusChanged{
+		UID:    d.UID,
+		Status: status,
 	})
 
 	return nil
