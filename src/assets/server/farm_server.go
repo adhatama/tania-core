@@ -1731,14 +1731,9 @@ func (s *FarmServer) SaveDevice(c echo.Context) error {
 	}
 
 	// Update nodered
-	deviceRead := &storage.DeviceRead{
-		UID:         d.UID,
-		DeviceID:    d.DeviceID,
-		Name:        d.Name,
-		TopicName:   d.TopicName,
-		Status:      d.Status,
-		Description: d.Description,
-		CreatedDate: d.CreatedDate,
+	deviceRead, err := MapToDeviceRead(d)
+	if err != nil {
+		return Error(c, err)
 	}
 
 	err = nodered.Update(deviceRead, "")
@@ -1870,6 +1865,24 @@ func (s *FarmServer) UpdateDevice(c echo.Context) error {
 		}
 	}
 
+	// Update nodered
+	devRead, err := MapToDeviceRead(device)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = nodered.Update(devRead, deviceRead.DeviceID)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = device.ChangeStatus(domain.DeviceStatusNodeRedCreated)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	devRead.Status = device.Status
+
 	err = <-s.DeviceEventRepo.Save(device.UID, device.Version, device.UncommittedChanges)
 	if err != nil {
 		return Error(c, err)
@@ -1878,7 +1891,7 @@ func (s *FarmServer) UpdateDevice(c echo.Context) error {
 	s.publishUncommittedEvents(device)
 
 	data := make(map[string]interface{})
-	data["data"] = device
+	data["data"] = devRead
 
 	return c.JSON(http.StatusOK, data)
 }
@@ -1917,7 +1930,28 @@ func (s *FarmServer) RemoveDevice(c echo.Context) error {
 
 	device := repository.NewDeviceFromHistory(events)
 
-	device.Remove()
+	err = device.Remove()
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Update nodered
+	devRead, err := MapToDeviceRead(device)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = nodered.Update(devRead, deviceRead.DeviceID)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = device.ChangeStatus(domain.DeviceStatusRemoved)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	devRead.Status = device.Status
 
 	err = <-s.DeviceEventRepo.Save(device.UID, device.Version, device.UncommittedChanges)
 	if err != nil {
@@ -1927,7 +1961,7 @@ func (s *FarmServer) RemoveDevice(c echo.Context) error {
 	s.publishUncommittedEvents(device)
 
 	data := make(map[string]interface{})
-	data["data"] = device
+	data["data"] = devRead
 
 	return c.JSON(http.StatusOK, data)
 }

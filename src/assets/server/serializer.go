@@ -679,6 +679,18 @@ func MapToAvailableMaterialPlantType(materials []storage.MaterialRead) []Availab
 	return aiSlice
 }
 
+func MapToDeviceRead(d *domain.Device) (*storage.DeviceRead, error) {
+	return &storage.DeviceRead{
+		UID:         d.UID,
+		DeviceID:    d.DeviceID,
+		Name:        d.Name,
+		TopicName:   d.TopicName,
+		Status:      d.Status,
+		Description: d.Description,
+		CreatedDate: d.CreatedDate,
+	}, nil
+}
+
 func (sf SimpleFarm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		UID  string `json:"uid"`
