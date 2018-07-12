@@ -24,6 +24,7 @@ import (
 	tasksserver "github.com/Tanibox/tania-core/src/tasks/server"
 	taskstorage "github.com/Tanibox/tania-core/src/tasks/storage"
 	userserver "github.com/Tanibox/tania-core/src/user/server"
+	websocketserver "github.com/Tanibox/tania-core/src/websocket/server"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -130,6 +131,11 @@ func main() {
 		e.Logger.Fatal(err)
 	}
 
+	websocketServer, err := websocketserver.NewWebsocketServer(db, bus)
+	if err != nil {
+		e.Logger.Fatal(err)
+	}
+
 	// Initialize user
 	err = initUser(authServer)
 
@@ -164,6 +170,9 @@ func main() {
 
 	userGroup := API.Group("/user", APIMiddlewares...)
 	userServer.Mount(userGroup)
+
+	websocketGroup := API.Group("/ws")
+	websocketServer.Mount(websocketGroup)
 
 	e.Static("/", "public")
 
