@@ -40,6 +40,56 @@ func (w *DeviceEventWrapper) UnmarshalJSON(b []byte) error {
 
 		w.EventData = e
 
+	case "DeviceIDChanged":
+		e := domain.DeviceIDChanged{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "DeviceNameChanged":
+		e := domain.DeviceNameChanged{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "DeviceDescriptionChanged":
+		e := domain.DeviceDescriptionChanged{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "DeviceStatusChanged":
+		e := domain.DeviceStatusChanged{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "DeviceRemoved":
+		e := domain.DeviceRemoved{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
 	}
 
 	return nil

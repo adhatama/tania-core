@@ -141,6 +141,11 @@ func NewFarmServer(
 		farmServer.MaterialReadRepo = repoSqlite.NewMaterialReadRepositorySqlite(db)
 		farmServer.MaterialReadQuery = querySqlite.NewMaterialReadQuerySqlite(db)
 
+		farmServer.DeviceEventRepo = repoSqlite.NewDeviceEventRepositorySqlite(db)
+		farmServer.DeviceEventQuery = querySqlite.NewDeviceEventQuerySqlite(db)
+		farmServer.DeviceReadRepo = repoSqlite.NewDeviceReadRepositorySqlite(db)
+		farmServer.DeviceReadQuery = querySqlite.NewDeviceReadQuerySqlite(db)
+
 		farmServer.CropReadQuery = querySqlite.NewCropReadQuerySqlite(db)
 
 		// TODO: AreaServiceInMemory should be renamed. It doesn't need InMemory name
@@ -152,6 +157,10 @@ func NewFarmServer(
 		// TODO: ReservoirServiceInMemory should be renamed. It doesn't need InMemory name
 		farmServer.ReservoirService = service.ReservoirServiceInMemory{
 			FarmReadQuery: farmServer.FarmReadQuery,
+		}
+
+		farmServer.DeviceService = service.DeviceService{
+			DeviceReadQuery: farmServer.DeviceReadQuery,
 		}
 
 	case config.DB_MYSQL:
