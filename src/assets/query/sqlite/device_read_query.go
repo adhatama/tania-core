@@ -134,3 +134,55 @@ func (s DeviceReadQuerySqlite) FindAll() <-chan query.QueryResult {
 
 	return result
 }
+
+func (s DeviceReadQuerySqlite) FindByDeviceID(deviceID string) <-chan query.QueryResult {
+	result := make(chan query.QueryResult)
+
+	go func() {
+		deviceRead := storage.DeviceRead{}
+		rowsData := deviceReadResult{}
+
+		err := s.DB.QueryRow("SELECT * FROM DEVICE_READ WHERE DEVICE_ID = ?", deviceID).Scan(
+			&rowsData.UID,
+			&rowsData.DeviceID,
+			&rowsData.Name,
+			&rowsData.TopicName,
+			&rowsData.Status,
+			&rowsData.Description,
+			&rowsData.CreatedDate,
+		)
+
+		if err != nil && err != sql.ErrNoRows {
+			result <- query.QueryResult{Error: err}
+		}
+
+		if err == sql.ErrNoRows {
+			result <- query.QueryResult{Result: deviceRead}
+		}
+
+		uid, err := uuid.FromString(rowsData.UID)
+		if err != nil {
+			result <- query.QueryResult{Result: err}
+		}
+
+		createdDate, err := time.Parse(time.RFC3339, rowsData.CreatedDate)
+		if err != nil {
+			result <- query.QueryResult{Result: err}
+		}
+
+		deviceRead = storage.DeviceRead{
+			UID:         uid,
+			DeviceID:    rowsData.DeviceID,
+			Name:        rowsData.Name,
+			TopicName:   rowsData.TopicName,
+			Status:      rowsData.Status,
+			Description: rowsData.Description,
+			CreatedDate: createdDate,
+		}
+
+		result <- query.QueryResult{Result: deviceRead}
+		close(result)
+	}()
+
+	return result
+}

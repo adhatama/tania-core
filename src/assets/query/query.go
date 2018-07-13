@@ -58,6 +58,7 @@ type DeviceEventQuery interface {
 type DeviceReadQuery interface {
 	FindAll() <-chan QueryResult
 	FindByID(deviceUID uuid.UUID) <-chan QueryResult
+	FindByDeviceID(deviceID string) <-chan QueryResult
 }
 
 type QueryResult struct {

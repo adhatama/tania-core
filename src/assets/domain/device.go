@@ -21,11 +21,7 @@ type Device struct {
 }
 
 type DeviceService interface {
-	FindByID(deviceUID uuid.UUID) (DeviceServiceResult, error)
-}
-
-type DeviceServiceResult struct {
-	*Device
+	IsDeviceIDExists(deviceID string) (bool, error)
 }
 
 const (
@@ -76,7 +72,18 @@ func (state *Device) Transition(event interface{}) {
 }
 
 func CreateDevice(deviceService DeviceService, deviceID, name, description string) (*Device, error) {
-	// validate device ID, name
+	isDeviceIDExists, err := deviceService.IsDeviceIDExists(deviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if isDeviceIDExists {
+		return nil, DeviceError{DeviceErrorDeviceIDAlreadyExistsCode}
+	}
+
+	if name == "" {
+		return nil, DeviceError{DeviceErrorNameEmptyCode}
+	}
 
 	// create topic name
 	topicName := "topic-" + deviceID
@@ -107,10 +114,16 @@ func CreateDevice(deviceService DeviceService, deviceID, name, description strin
 	return device, nil
 }
 
-func (d *Device) ChangeID(newDeviceID string) error {
-	// validate new device ID
+func (d *Device) ChangeID(deviceService DeviceService, newDeviceID string) error {
+	isDeviceIDExists, err := deviceService.IsDeviceIDExists(newDeviceID)
+	if err != nil {
+		return err
+	}
 
-	// create topic name
+	if isDeviceIDExists {
+		return DeviceError{DeviceErrorDeviceIDAlreadyExistsCode}
+	}
+
 	newTopicName := "topic-" + newDeviceID
 
 	d.TrackChange(DeviceIDChanged{
@@ -124,7 +137,9 @@ func (d *Device) ChangeID(newDeviceID string) error {
 }
 
 func (d *Device) ChangeName(name string) error {
-	// validate name
+	if name == "" {
+		return DeviceError{DeviceErrorNameEmptyCode}
+	}
 
 	d.TrackChange(DeviceNameChanged{
 		UID:  d.UID,

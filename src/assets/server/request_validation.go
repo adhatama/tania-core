@@ -121,6 +121,13 @@ func Error(c echo.Context, err error) error {
 		logData.WithField("error_message", re.Error()).Info()
 
 		return c.JSON(http.StatusBadRequest, errorResponse)
+	} else if re, ok := err.(domain.DeviceError); ok {
+		errorResponse["error_code"] = strconv.Itoa(re.Code)
+		errorResponse["error_message"] = re.Error()
+
+		logData.WithField("error_message", re.Error()).Info()
+
+		return c.JSON(http.StatusBadRequest, errorResponse)
 	} else if rve, ok := err.(RequestValidationError); ok {
 		errorResponse["field_name"] = rve.FieldName
 		errorResponse["error_code"] = rve.ErrorCode

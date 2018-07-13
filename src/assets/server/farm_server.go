@@ -1846,7 +1846,7 @@ func (s *FarmServer) UpdateDevice(c echo.Context) error {
 	device := repository.NewDeviceFromHistory(events)
 
 	if deviceID != "" {
-		err = device.ChangeID(deviceID)
+		err = device.ChangeID(s.DeviceService, deviceID)
 		if err != nil {
 			return Error(c, err)
 		}

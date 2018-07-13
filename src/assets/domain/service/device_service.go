@@ -4,39 +4,26 @@ import (
 	"github.com/Tanibox/tania-core/src/assets/domain"
 	"github.com/Tanibox/tania-core/src/assets/query"
 	"github.com/Tanibox/tania-core/src/assets/storage"
-	uuid "github.com/satori/go.uuid"
 )
 
 type DeviceService struct {
 	DeviceReadQuery query.DeviceReadQuery
 }
 
-func (s DeviceService) FindByID(deviceUID uuid.UUID) (domain.DeviceServiceResult, error) {
-	result := <-s.DeviceReadQuery.FindByID(deviceUID)
-
+func (s DeviceService) IsDeviceIDExists(deviceID string) (bool, error) {
+	result := <-s.DeviceReadQuery.FindByDeviceID(deviceID)
 	if result.Error != nil {
-		return domain.DeviceServiceResult{}, result.Error
+		return false, result.Error
 	}
 
 	device, ok := result.Result.(storage.DeviceRead)
-
 	if !ok {
-		return domain.DeviceServiceResult{}, domain.ReservoirError{Code: domain.ReservoirErrorFarmNotFound}
+		return false, domain.DeviceError{Code: domain.DeviceErrorDeviceNotFoundCode}
 	}
 
 	if device == (storage.DeviceRead{}) {
-		return domain.DeviceServiceResult{}, domain.ReservoirError{Code: domain.ReservoirErrorFarmNotFound}
+		return false, nil
 	}
 
-	return domain.DeviceServiceResult{
-		Device: &domain.Device{
-			UID:         device.UID,
-			DeviceID:    device.DeviceID,
-			Name:        device.Name,
-			TopicName:   device.TopicName,
-			Status:      device.Status,
-			Description: device.Description,
-			CreatedDate: device.CreatedDate,
-		},
-	}, nil
+	return true, nil
 }
