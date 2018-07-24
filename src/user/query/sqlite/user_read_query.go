@@ -21,7 +21,7 @@ func NewUserReadQuerySqlite(db *sql.DB) query.UserReadQuery {
 
 type userReadResult struct {
 	UID         string
-	Username    string
+	Email       string
 	Password    string
 	CreatedDate string
 	LastUpdated string
@@ -36,7 +36,7 @@ func (s UserReadQuerySqlite) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 
 		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE UID = ?", uid).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -67,7 +67,7 @@ func (s UserReadQuerySqlite) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: createdDate,
 			LastUpdated: lastUpdated,
@@ -89,7 +89,7 @@ func (s UserReadQuerySqlite) FindByUsername(username string) <-chan query.QueryR
 
 		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE USERNAME = ?", username).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -120,7 +120,7 @@ func (s UserReadQuerySqlite) FindByUsername(username string) <-chan query.QueryR
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: createdDate,
 			LastUpdated: lastUpdated,
@@ -143,7 +143,7 @@ func (s UserReadQuerySqlite) FindByUsernameAndPassword(username, password string
 		err := s.DB.QueryRow(`SELECT * FROM USER_READ
 			WHERE USERNAME = ?`, username).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -179,7 +179,7 @@ func (s UserReadQuerySqlite) FindByUsernameAndPassword(username, password string
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: createdDate,
 			LastUpdated: lastUpdated,

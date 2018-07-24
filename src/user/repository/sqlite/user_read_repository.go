@@ -28,10 +28,10 @@ func (f *UserReadRepositorySqlite) Save(userRead *storage.UserRead) <-chan error
 
 		if count > 0 {
 			_, err := f.DB.Exec(`UPDATE USER_READ SET
-				USERNAME = ?, PASSWORD = ?,
+				EMAIL = ?, PASSWORD = ?,
 				CREATED_DATE = ?, LAST_UPDATED = ?
 				WHERE UID = ?`,
-				userRead.Username, userRead.Password,
+				userRead.Email, userRead.Password,
 				userRead.CreatedDate.Format(time.RFC3339), userRead.LastUpdated.Format(time.RFC3339),
 				userRead.UID)
 
@@ -40,9 +40,9 @@ func (f *UserReadRepositorySqlite) Save(userRead *storage.UserRead) <-chan error
 			}
 		} else {
 			_, err := f.DB.Exec(`INSERT INTO USER_READ
-				(UID, USERNAME, PASSWORD, CREATED_DATE, LAST_UPDATED)
+				(UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED)
 				VALUES (?, ?, ?, ?, ?)`,
-				userRead.UID, userRead.Username, userRead.Password,
+				userRead.UID, userRead.Email, userRead.Password,
 				userRead.CreatedDate.Format(time.RFC3339), userRead.LastUpdated.Format(time.RFC3339))
 
 			if err != nil {

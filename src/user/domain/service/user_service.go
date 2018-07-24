@@ -13,7 +13,7 @@ type UserServiceImpl struct {
 	UserReadQuery query.UserReadQuery
 }
 
-func (s UserServiceImpl) FindUserByUsername(username string) (domain.UserServiceResult, error) {
+func (s UserServiceImpl) FindUserByEmail(username string) (domain.UserServiceResult, error) {
 	result := <-s.UserReadQuery.FindByUsername(username)
 
 	if result.Error != nil {
@@ -26,7 +26,7 @@ func (s UserServiceImpl) FindUserByUsername(username string) (domain.UserService
 	}
 
 	return domain.UserServiceResult{
-		UID:      user.UID,
-		Username: user.Username,
+		UID:   user.UID,
+		Email: user.Email,
 	}, nil
 }

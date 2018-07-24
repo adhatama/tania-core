@@ -21,7 +21,7 @@ func NewUserReadQueryMysql(db *sql.DB) query.UserReadQuery {
 
 type userReadResult struct {
 	UID         []byte
-	Username    string
+	Email       string
 	Password    string
 	CreatedDate time.Time
 	LastUpdated time.Time
@@ -36,7 +36,7 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 
 		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE UID = ?", uid.Bytes()).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -57,7 +57,7 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,
@@ -70,16 +70,16 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 	return result
 }
 
-func (s UserReadQueryMysql) FindByUsername(username string) <-chan query.QueryResult {
+func (s UserReadQueryMysql) FindByUsername(email string) <-chan query.QueryResult {
 	result := make(chan query.QueryResult)
 
 	go func() {
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE USERNAME = ?", username).Scan(
+		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE USERNAME = ?", email).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -100,7 +100,7 @@ func (s UserReadQueryMysql) FindByUsername(username string) <-chan query.QueryRe
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,
@@ -113,7 +113,7 @@ func (s UserReadQueryMysql) FindByUsername(username string) <-chan query.QueryRe
 	return result
 }
 
-func (s UserReadQueryMysql) FindByUsernameAndPassword(username, password string) <-chan query.QueryResult {
+func (s UserReadQueryMysql) FindByUsernameAndPassword(email, password string) <-chan query.QueryResult {
 	result := make(chan query.QueryResult)
 
 	go func() {
@@ -121,9 +121,9 @@ func (s UserReadQueryMysql) FindByUsernameAndPassword(username, password string)
 		rowsData := userReadResult{}
 
 		err := s.DB.QueryRow(`SELECT * FROM USER_READ
-			WHERE USERNAME = ?`, username).Scan(
+			WHERE USERNAME = ?`, email).Scan(
 			&rowsData.UID,
-			&rowsData.Username,
+			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
@@ -149,7 +149,7 @@ func (s UserReadQueryMysql) FindByUsernameAndPassword(username, password string)
 
 		userRead = storage.UserRead{
 			UID:         userUID,
-			Username:    rowsData.Username,
+			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,

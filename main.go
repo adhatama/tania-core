@@ -171,10 +171,15 @@ func main() {
 }
 
 func initUser(authServer *userserver.AuthServer) error {
+	defaultOrganizationUID, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+
 	defaultUsername := "tania"
 	defaultPassword := "tania"
 
-	_, _, err := authServer.RegisterNewUser(defaultUsername, defaultPassword, defaultPassword)
+	_, _, err = authServer.RegisterNewUser(defaultOrganizationUID, defaultUsername, defaultPassword, defaultPassword)
 	if err != nil {
 		log.Print("User ", defaultUsername, " has already created")
 		return err

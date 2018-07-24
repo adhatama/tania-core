@@ -30,7 +30,14 @@ type UserServer struct {
 	UserAuthRepo   repository.UserAuthRepository
 	UserAuthQuery  query.UserAuthQuery
 	UserService    domain.UserService
-	EventBus       eventbus.TaniaEventBus
+
+	OrganizationEventRepo  repository.OrganizationEventRepository
+	OrganizationReadRepo   repository.OrganizationReadRepository
+	OrganizationEventQuery query.OrganizationEventQuery
+	OrganizationReadQuery  query.OrganizationReadQuery
+	OrganizationService    domain.OrganizationService
+
+	EventBus eventbus.TaniaEventBus
 }
 
 // NewUserServer initializes UserServer's dependencies and create new UserServer struct
@@ -60,10 +67,20 @@ func NewUserServer(
 		userServer.UserEventQuery = queryMysql.NewUserEventQueryMysql(db)
 		userServer.UserReadQuery = queryMysql.NewUserReadQueryMysql(db)
 
+		userServer.OrganizationEventRepo = repoMysql.NewOrganizationEventRepositoryMysql(db)
+		userServer.OrganizationReadRepo = repoMysql.NewOrganizationReadRepositoryMysql(db)
+		userServer.OrganizationEventQuery = queryMysql.NewOrganizationEventQueryMysql(db)
+		userServer.OrganizationReadQuery = queryMysql.NewOrganizationReadQueryMysql(db)
+
 		userServer.UserAuthRepo = repoMysql.NewUserAuthRepositoryMysql(db)
 		userServer.UserAuthQuery = queryMysql.NewUserAuthQueryMysql(db)
 
-		userServer.UserService = service.UserServiceImpl{UserReadQuery: userServer.UserReadQuery}
+		userServer.UserService = service.UserServiceImpl{
+			UserReadQuery: userServer.UserReadQuery,
+		}
+		userServer.OrganizationService = service.OrganizationServiceImpl{
+			OrganizationReadQuery: userServer.OrganizationReadQuery,
+		}
 
 	}
 
@@ -74,6 +91,10 @@ func NewUserServer(
 
 // InitSubscriber defines the mapping of which event this domain listen with their handler
 func (s *UserServer) InitSubscriber() {
+	s.EventBus.Subscribe("OrganizationCreated", s.SaveToOrganizationReadModel)
+	s.EventBus.Subscribe("OrganizationVerified", s.SaveToOrganizationReadModel)
+
+	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordChanged", s.SaveToUserReadModel)
 }
 

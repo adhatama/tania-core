@@ -15,7 +15,7 @@ type UserEvent struct {
 
 type UserRead struct {
 	UID         uuid.UUID `json:"uid"`
-	Username    string    `json:"username"`
+	Email       string    `json:"email"`
 	Password    []byte    `json:"-"`
 	CreatedDate time.Time `json:"created_date"`
 	LastUpdated time.Time `json:"last_updated"`
@@ -27,4 +27,20 @@ type UserAuth struct {
 	TokenExpires int       `json:"token_expires"`
 	CreatedDate  time.Time `json:"created_date"`
 	LastUpdated  time.Time `json:"last_updated"`
+}
+
+type OrganizationEvent struct {
+	OrganizationUID uuid.UUID
+	Version         int
+	CreatedDate     time.Time
+	Event           interface{}
+}
+
+type OrganizationRead struct {
+	UID              uuid.UUID `json:"uid"`
+	Name             string    `json:"name"`
+	Email            string    `json:"email"`
+	VerificationCode int       `json:"verification_code"`
+	Status           string    `json:"status"`
+	CreatedDate      time.Time `json:"created_date"`
 }

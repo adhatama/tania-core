@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,7 +32,14 @@ type AuthServer struct {
 	UserAuthRepo   repository.UserAuthRepository
 	UserAuthQuery  query.UserAuthQuery
 	UserService    domain.UserService
-	EventBus       eventbus.TaniaEventBus
+
+	OrganizationEventRepo  repository.OrganizationEventRepository
+	OrganizationReadRepo   repository.OrganizationReadRepository
+	OrganizationEventQuery query.OrganizationEventQuery
+	OrganizationReadQuery  query.OrganizationReadQuery
+	OrganizationService    domain.OrganizationService
+
+	EventBus eventbus.TaniaEventBus
 }
 
 // NewAuthServer initializes AuthServer's dependencies and create new AuthServer struct
@@ -62,10 +70,20 @@ func NewAuthServer(
 		authServer.UserEventQuery = queryMysql.NewUserEventQueryMysql(db)
 		authServer.UserReadQuery = queryMysql.NewUserReadQueryMysql(db)
 
+		authServer.OrganizationEventRepo = repoMysql.NewOrganizationEventRepositoryMysql(db)
+		authServer.OrganizationReadRepo = repoMysql.NewOrganizationReadRepositoryMysql(db)
+		authServer.OrganizationEventQuery = queryMysql.NewOrganizationEventQueryMysql(db)
+		authServer.OrganizationReadQuery = queryMysql.NewOrganizationReadQueryMysql(db)
+
 		authServer.UserAuthRepo = repoMysql.NewUserAuthRepositoryMysql(db)
 		authServer.UserAuthQuery = queryMysql.NewUserAuthQueryMysql(db)
 
-		authServer.UserService = service.UserServiceImpl{UserReadQuery: authServer.UserReadQuery}
+		authServer.UserService = service.UserServiceImpl{
+			UserReadQuery: authServer.UserReadQuery,
+		}
+		authServer.OrganizationService = service.OrganizationServiceImpl{
+			OrganizationReadQuery: authServer.OrganizationReadQuery,
+		}
 
 	}
 
@@ -76,12 +94,14 @@ func NewAuthServer(
 
 // InitSubscriber defines the mapping of which event this domain listen with their handler
 func (s *AuthServer) InitSubscriber() {
-	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
+
 }
 
 // Mount defines the AuthServer's endpoints with its handlers
 func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("authorize", s.Authorize)
+	g.POST("register/organization", s.RegisterOrganization)
+	g.POST("organization/verification", s.OrganizationVerification)
 	g.POST("register", s.Register)
 }
 
@@ -169,7 +189,98 @@ func (s *AuthServer) Authorize(c echo.Context) error {
 	return c.Redirect(302, selectedRedirectURI)
 }
 
+func (s *AuthServer) RegisterOrganization(c echo.Context) error {
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+
+	if name == "" {
+		return Error(c, errors.New("Name is required"))
+	}
+
+	if email == "" {
+		return Error(c, errors.New("Email is required"))
+	}
+
+	org, err := domain.CreateOrganization(s.OrganizationService, name, email)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.OrganizationEventRepo.Save(org.UID, org.Version, org.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(org)
+
+	data := make(map[string]interface{})
+	data["data"] = org
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) OrganizationVerification(c echo.Context) error {
+	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	verificationCode := c.FormValue("verification_code")
+	code, err := strconv.Atoi(verificationCode)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	if verificationCode == "" {
+		return Error(c, errors.New("Verification code is required"))
+	}
+
+	queryResult := <-s.OrganizationReadQuery.FindByIDAndVerificationCode(organizationUID, code)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	orgRead, ok := queryResult.Result.(storage.OrganizationRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if orgRead.UID == (uuid.UUID{}) {
+		return Error(c, errors.New("Verification code not found"))
+	}
+
+	eventQueryResult := <-s.OrganizationEventQuery.FindAllByID(orgRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.OrganizationEvent)
+	org := repository.NewOrganizationFromHistory(events)
+
+	err = org.Verify()
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.OrganizationEventRepo.Save(org.UID, org.Version, org.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+	fmt.Println(org)
+	s.publishUncommittedEvents(org)
+
+	data := make(map[string]interface{})
+	data["data"] = organizationUID
+
+	return c.JSON(http.StatusOK, data)
+}
+
 func (s *AuthServer) Register(c echo.Context) error {
+	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 	confirmPassword := c.FormValue("confirm_password")
@@ -178,7 +289,7 @@ func (s *AuthServer) Register(c echo.Context) error {
 		return Error(c, errors.New("Confirm password didn't match"))
 	}
 
-	user, _, err := s.RegisterNewUser(username, password, confirmPassword)
+	user, _, err := s.RegisterNewUser(organizationUID, username, password, confirmPassword)
 	if err != nil {
 		return Error(c, err)
 	}
@@ -191,8 +302,8 @@ func (s *AuthServer) Register(c echo.Context) error {
 
 // RegisterNewUser is used to call the behaviour and persist it
 // It is used by the register handler and in the initial user creation
-func (s *AuthServer) RegisterNewUser(username, password, confirmPassword string) (*domain.User, *storage.UserAuth, error) {
-	user, err := domain.CreateUser(s.UserService, username, password, confirmPassword)
+func (s *AuthServer) RegisterNewUser(organizationUID uuid.UUID, email, password, confirmPassword string) (*domain.User, *storage.UserAuth, error) {
+	user, err := domain.CreateUser(s.UserService, organizationUID, email, password, confirmPassword)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -222,6 +333,13 @@ func (s *AuthServer) publishUncommittedEvents(entity interface{}) error {
 			name := structhelper.GetName(v)
 			s.EventBus.Publish(name, v)
 		}
+
+	case *domain.Organization:
+		for _, v := range e.UncommittedChanges {
+			name := structhelper.GetName(v)
+			s.EventBus.Publish(name, v)
+		}
+
 	}
 
 	return nil

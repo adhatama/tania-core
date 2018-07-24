@@ -7,15 +7,30 @@ import (
 )
 
 type UserCreated struct {
-	UID         uuid.UUID
-	Username    string
-	Password    []byte
-	CreatedDate time.Time
-	LastUpdated time.Time
+	UID             uuid.UUID
+	Email           string
+	Password        []byte
+	OrganizationUID uuid.UUID
+	InvitationCode  int
+	Role            string
+	Status          string
+	CreatedDate     time.Time
+	LastUpdated     time.Time
 }
 
 type PasswordChanged struct {
 	UID         uuid.UUID
 	NewPassword []byte
 	DateChanged time.Time
+}
+
+type UserProfileChanged struct {
+	UID  uuid.UUID
+	Name string
+}
+
+type UserVerified struct {
+	UID    uuid.UUID
+	Email  string
+	Status string
 }

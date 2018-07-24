@@ -33,3 +33,20 @@ func NewUserFromHistory(events []storage.UserEvent) *domain.User {
 	}
 	return state
 }
+
+type OrganizationEventRepository interface {
+	Save(uid uuid.UUID, latestVersion int, events []interface{}) <-chan error
+}
+
+type OrganizationReadRepository interface {
+	Save(organizationRead *storage.OrganizationRead) <-chan error
+}
+
+func NewOrganizationFromHistory(events []storage.OrganizationEvent) *domain.Organization {
+	state := &domain.Organization{}
+	for _, v := range events {
+		state.Transition(v.Event)
+		state.Version++
+	}
+	return state
+}

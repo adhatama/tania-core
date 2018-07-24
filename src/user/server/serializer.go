@@ -8,7 +8,7 @@ import (
 func MapToUserRead(user *domain.User) storage.UserRead {
 	userRead := storage.UserRead{}
 	userRead.UID = user.UID
-	userRead.Username = user.Username
+	userRead.Email = user.Email
 	userRead.CreatedDate = user.CreatedDate
 	userRead.LastUpdated = user.LastUpdated
 
