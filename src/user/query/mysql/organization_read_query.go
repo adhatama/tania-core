@@ -168,7 +168,9 @@ func (s OrganizationReadQueryMysql) FindByIDAndVerificationCode(uid uuid.UUID, v
 		orgRead := storage.OrganizationRead{}
 		rowsData := organizationReadResult{}
 
-		err := s.DB.QueryRow("SELECT * FROM ORGANIZATION_READ WHERE UID = ?", uid.Bytes()).Scan(
+		err := s.DB.QueryRow("SELECT * FROM ORGANIZATION_READ WHERE UID = ? AND VERIFICATION_CODE = ?",
+			uid.Bytes(), verificationCode,
+		).Scan(
 			&rowsData.UID,
 			&rowsData.Name,
 			&rowsData.Email,

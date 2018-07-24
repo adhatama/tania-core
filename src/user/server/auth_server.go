@@ -3,7 +3,6 @@ package server
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -249,6 +248,10 @@ func (s *AuthServer) OrganizationVerification(c echo.Context) error {
 		return Error(c, errors.New("Verification code not found"))
 	}
 
+	if orgRead.Status == domain.OrganizationStatusConfirmed {
+		return Error(c, errors.New("Organization is already confirmed"))
+	}
+
 	eventQueryResult := <-s.OrganizationEventQuery.FindAllByID(orgRead.UID)
 	if eventQueryResult.Error != nil {
 		return Error(c, eventQueryResult.Error)
@@ -266,7 +269,7 @@ func (s *AuthServer) OrganizationVerification(c echo.Context) error {
 	if err != nil {
 		return Error(c, err)
 	}
-	fmt.Println(org)
+
 	s.publishUncommittedEvents(org)
 
 	data := make(map[string]interface{})
