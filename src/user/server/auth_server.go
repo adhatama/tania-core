@@ -103,6 +103,8 @@ func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("organization/verification", s.VerifyOrganization)
 	g.POST("register/user", s.RegisterUser)
 	g.POST("user/verification", s.VerifyUser)
+	g.POST("forgot_password", s.ForgotPassword)
+	g.POST("reset_password", s.ResetPassword)
 }
 
 func (s *AuthServer) Authorize(c echo.Context) error {
@@ -110,14 +112,14 @@ func (s *AuthServer) Authorize(c echo.Context) error {
 	redirectURI := config.Config.RedirectURI
 	clientID := *config.Config.ClientID
 
-	reqUsername := c.FormValue("username")
+	reqEmail := c.FormValue("email")
 	reqPassword := c.FormValue("password")
 	reqClientID := c.FormValue("client_id")
 	reqResponseType := c.FormValue("response_type")
 	reqRedirectURI := c.FormValue("redirect_uri")
 	reqState := c.FormValue("state")
 
-	queryResult := <-s.UserReadQuery.FindByUsernameAndPassword(reqUsername, reqPassword)
+	queryResult := <-s.UserReadQuery.FindByEmailAndPassword(reqEmail, reqPassword)
 	if queryResult.Error != nil {
 		return Error(c, queryResult.Error)
 	}
@@ -371,7 +373,113 @@ func (s *AuthServer) VerifyUser(c echo.Context) error {
 	s.publishUncommittedEvents(user)
 
 	data := make(map[string]interface{})
-	data["data"] = user
+	data["data"] = MapToUserRead(user)
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) ForgotPassword(c echo.Context) error {
+	email := c.FormValue("email")
+
+	queryResult := <-s.UserReadQuery.FindByEmail(email)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	userRead, ok := queryResult.Result.(storage.UserRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if userRead.UID == (uuid.UUID{}) {
+		return Error(c, errors.New("Email has not registered"))
+	}
+
+	// Process
+	eventQueryResult := <-s.UserEventQuery.FindAllByID(userRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.UserEvent)
+	user := repository.NewUserFromHistory(events)
+
+	err := user.RequestResetPassword()
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(user)
+
+	data := make(map[string]interface{})
+	data["data"] = MapToUserRead(user)
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) ResetPassword(c echo.Context) error {
+	email := c.FormValue("email")
+	resetPwdCode := c.FormValue("reset_password_code")
+	newPassword := c.FormValue("new_password")
+	confirmNewPassword := c.FormValue("confirm_new_password")
+
+	if resetPwdCode == "" {
+		return Error(c, errors.New("Reset password code is required"))
+	}
+
+	code, err := strconv.Atoi(resetPwdCode)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	queryResult := <-s.UserReadQuery.FindByEmailAndResetPasswordCode(email, code)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	userRead, ok := queryResult.Result.(storage.UserRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if userRead.UID == (uuid.UUID{}) {
+		return Error(c, errors.New("Invitation code not found"))
+	}
+
+	if newPassword != confirmNewPassword {
+		return Error(c, NewRequestValidationError(NOT_MATCH, "password"))
+	}
+
+	// Process
+	eventQueryResult := <-s.UserEventQuery.FindAllByID(userRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.UserEvent)
+	user := repository.NewUserFromHistory(events)
+
+	err = user.ResetPassword(newPassword)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Persists //
+	resultSave := <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if resultSave != nil {
+		return Error(c, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error"))
+	}
+
+	// Publish //
+	s.publishUncommittedEvents(user)
+
+	data := make(map[string]storage.UserRead)
+	data["data"] = MapToUserRead(user)
 
 	return c.JSON(http.StatusOK, data)
 }

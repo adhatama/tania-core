@@ -89,7 +89,7 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 	return result
 }
 
-func (s UserReadQueryMysql) FindByUsername(email string) <-chan query.QueryResult {
+func (s UserReadQueryMysql) FindByEmail(email string) <-chan query.QueryResult {
 	result := make(chan query.QueryResult)
 
 	go func() {
@@ -133,7 +133,7 @@ func (s UserReadQueryMysql) FindByUsername(email string) <-chan query.QueryResul
 	return result
 }
 
-func (s UserReadQueryMysql) FindByUsernameAndPassword(email, password string) <-chan query.QueryResult {
+func (s UserReadQueryMysql) FindByEmailAndPassword(email, password string) <-chan query.QueryResult {
 	result := make(chan query.QueryResult)
 
 	go func() {
@@ -192,6 +192,49 @@ func (s UserReadQueryMysql) FindByOrganizationIDAndInvitationCode(orgUID uuid.UU
 		err := s.DB.QueryRow(`SELECT UID, EMAIL, CREATED_DATE, LAST_UPDATED
 			FROM USER_READ WHERE ORGANIZATION_UID = ? AND INVITATION_CODE = ?`,
 			orgUID.Bytes(), invitationCode).Scan(
+			&rowsData.UID,
+			&rowsData.Email,
+			&rowsData.CreatedDate,
+			&rowsData.LastUpdated,
+		)
+
+		if err != nil && err != sql.ErrNoRows {
+			result <- query.QueryResult{Error: err}
+		}
+
+		if err == sql.ErrNoRows {
+			result <- query.QueryResult{Result: userRead}
+		}
+
+		userUID, err := uuid.FromBytes(rowsData.UID)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
+		userRead = storage.UserRead{
+			UID:         userUID,
+			Email:       rowsData.Email,
+			CreatedDate: rowsData.CreatedDate,
+			LastUpdated: rowsData.LastUpdated,
+		}
+
+		result <- query.QueryResult{Result: userRead}
+		close(result)
+	}()
+
+	return result
+}
+
+func (s UserReadQueryMysql) FindByEmailAndResetPasswordCode(email string, code int) <-chan query.QueryResult {
+	result := make(chan query.QueryResult)
+
+	go func() {
+		userRead := storage.UserRead{}
+		rowsData := userReadResult{}
+
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, CREATED_DATE, LAST_UPDATED
+			FROM USER_READ WHERE EMAIL = ? AND RESET_PASSWORD_CODE = ?`,
+			email, code).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.CreatedDate,

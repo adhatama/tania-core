@@ -34,3 +34,9 @@ type UserVerified struct {
 	Email  string
 	Status string
 }
+
+type ResetPasswordRequested struct {
+	UID               uuid.UUID
+	Email             string
+	ResetPasswordCode int
+}

@@ -10,16 +10,17 @@ import (
 )
 
 type User struct {
-	UID             uuid.UUID
-	Email           string
-	Password        []byte
-	Role            string
-	Status          string
-	Name            string
-	OrganizationUID uuid.UUID
-	InvitationCode  int
-	CreatedDate     time.Time
-	LastUpdated     time.Time
+	UID               uuid.UUID
+	Email             string
+	Password          []byte
+	Role              string
+	Status            string
+	Name              string
+	OrganizationUID   uuid.UUID
+	InvitationCode    int
+	ResetPasswordCode int
+	CreatedDate       time.Time
+	LastUpdated       time.Time
 
 	// Events
 	Version            int
@@ -73,6 +74,9 @@ func (state *User) Transition(event interface{}) {
 	case UserVerified:
 		state.Status = e.Status
 
+	case ResetPasswordRequested:
+		state.ResetPasswordCode = e.ResetPasswordCode
+
 	}
 }
 
@@ -108,9 +112,14 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, passw
 	rand.Seed(time.Now().UnixNano())
 	code := 100000 + rand.Intn(900000)
 
-	status := UserStatusPendingConfirmation
-	if role == UserRoleAdmin {
+	status := ""
+	switch role {
+	case UserRoleAdmin:
 		status = UserStatusConfirmed
+	case UserRoleUser:
+		status = UserStatusPendingConfirmation
+	default:
+		return nil, errors.New("Role not found")
 	}
 
 	user := &User{
@@ -196,6 +205,35 @@ func (u *User) VerifyInvitation() error {
 		UID:    u.UID,
 		Email:  u.Email,
 		Status: UserStatusConfirmed,
+	})
+
+	return nil
+}
+
+func (u *User) RequestResetPassword() error {
+	// Generate 6 digit random number
+	rand.Seed(time.Now().UnixNano())
+	code := 100000 + rand.Intn(900000)
+
+	u.TrackChange(ResetPasswordRequested{
+		UID:               u.UID,
+		Email:             u.Email,
+		ResetPasswordCode: code,
+	})
+
+	return nil
+}
+
+func (u *User) ResetPassword(newPassword string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	u.TrackChange(PasswordChanged{
+		UID:         u.UID,
+		NewPassword: hash,
+		DateChanged: time.Now(),
 	})
 
 	return nil

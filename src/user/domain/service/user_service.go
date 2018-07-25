@@ -13,8 +13,8 @@ type UserServiceImpl struct {
 	UserReadQuery query.UserReadQuery
 }
 
-func (s UserServiceImpl) FindUserByEmail(username string) (domain.UserServiceResult, error) {
-	result := <-s.UserReadQuery.FindByUsername(username)
+func (s UserServiceImpl) FindUserByEmail(email string) (domain.UserServiceResult, error) {
+	result := <-s.UserReadQuery.FindByEmail(email)
 
 	if result.Error != nil {
 		return domain.UserServiceResult{}, result.Error

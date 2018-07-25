@@ -97,6 +97,8 @@ func (s *UserServer) InitSubscriber() {
 	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordChanged", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("UserVerified", s.SaveToUserReadModel)
+	s.EventBus.Subscribe("ResetPasswordRequested", s.SaveToUserReadModel)
+	s.EventBus.Subscribe("PasswordResetVerified", s.SaveToUserReadModel)
 
 	s.EventBus.Subscribe("UserCreated", s.SaveToAuthModel)
 }
@@ -111,8 +113,7 @@ func (s *UserServer) ChangePassword(c echo.Context) error {
 	newPassword := c.FormValue("new_password")
 	confirmNewPassword := c.FormValue("confirm_new_password")
 
-	// We only use one default user, which is `tania`, so it's okay to hardcoded it here
-	queryResult := <-s.UserReadQuery.FindByUsername("tania")
+	queryResult := <-s.UserReadQuery.FindByEmail("tania")
 	if queryResult.Error != nil {
 		return queryResult.Error
 	}
