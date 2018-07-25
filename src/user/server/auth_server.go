@@ -102,8 +102,11 @@ func (s *AuthServer) InitSubscriber() {
 // Mount defines the AuthServer's endpoints with its handlers
 func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("authorize", s.Authorize)
+
 	g.POST("register/organization", s.RegisterOrganization)
 	g.POST("organization/verification", s.VerifyOrganization)
+	g.POST("organization/profile/:id", s.EditOrganizationProfile)
+
 	g.POST("register/user", s.RegisterUser)
 	g.POST("user/verification", s.VerifyUser)
 	g.POST("forgot_password", s.ForgotPassword)
@@ -264,6 +267,60 @@ func (s *AuthServer) VerifyOrganization(c echo.Context) error {
 	org := repository.NewOrganizationFromHistory(events)
 
 	err = org.Verify()
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.OrganizationEventRepo.Save(org.UID, org.Version, org.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(org)
+
+	data := make(map[string]interface{})
+	data["data"] = organizationUID
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) EditOrganizationProfile(c echo.Context) error {
+	name := c.FormValue("name")
+	orgType := c.FormValue("type")
+	totalMember := c.FormValue("total_member")
+	province := c.FormValue("province")
+	city := c.FormValue("city")
+
+	// Validate
+	organizationUID, err := uuid.FromString(c.Param("id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	queryResult := <-s.OrganizationReadQuery.FindByID(organizationUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	orgRead, ok := queryResult.Result.(storage.OrganizationRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if orgRead.UID == (uuid.UUID{}) {
+		return Error(c, errors.New("Verification code not found"))
+	}
+
+	// Process
+	eventQueryResult := <-s.OrganizationEventQuery.FindAllByID(orgRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.OrganizationEvent)
+	org := repository.NewOrganizationFromHistory(events)
+
+	err = org.ChangeProfile(name, orgType, totalMember, province, city)
 	if err != nil {
 		return Error(c, err)
 	}

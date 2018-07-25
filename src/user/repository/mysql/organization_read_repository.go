@@ -27,10 +27,12 @@ func (f *OrganizationReadRepositoryMysql) Save(organizationRead *storage.Organiz
 
 		if count > 0 {
 			_, err := f.DB.Exec(`UPDATE ORGANIZATION_READ SET
-				NAME = ?, EMAIL = ?, VERIFICATION_CODE = ?, STATUS = ?, CREATED_DATE = ?
+				NAME = ?, EMAIL = ?, VERIFICATION_CODE = ?, STATUS = ?, TYPE = ?, TOTAL_MEMBER = ?,
+				PROVINCE = ?, CITY = ?, CREATED_DATE = ?
 				WHERE UID = ?`,
 				organizationRead.Name, organizationRead.Email, organizationRead.VerificationCode,
-				organizationRead.Status, organizationRead.CreatedDate,
+				organizationRead.Status, organizationRead.Type, organizationRead.TotalMember,
+				organizationRead.Province, organizationRead.City, organizationRead.CreatedDate,
 				organizationRead.UID.Bytes(),
 			)
 
@@ -39,10 +41,12 @@ func (f *OrganizationReadRepositoryMysql) Save(organizationRead *storage.Organiz
 			}
 		} else {
 			_, err := f.DB.Exec(`INSERT INTO ORGANIZATION_READ
-				(UID, NAME, EMAIL, VERIFICATION_CODE, STATUS, CREATED_DATE)
-				VALUES (?, ?, ?, ?, ?, ?)`,
+				(UID, NAME, EMAIL, VERIFICATION_CODE, STATUS, TYPE, TOTAL_MEMBER,
+					PROVINCE, CITY, CREATED_DATE)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				organizationRead.UID.Bytes(), organizationRead.Name, organizationRead.Email,
-				organizationRead.VerificationCode, organizationRead.Status,
+				organizationRead.VerificationCode, organizationRead.Status, organizationRead.Type,
+				organizationRead.TotalMember, organizationRead.Province, organizationRead.City,
 				organizationRead.CreatedDate,
 			)
 

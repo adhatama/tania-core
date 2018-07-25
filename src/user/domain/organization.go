@@ -49,8 +49,12 @@ func (state *Organization) Transition(event interface{}) {
 		state.Status = e.Status
 		state.CreatedDate = e.CreatedDate
 
-	case OrganizationNameChanged:
+	case OrganizationProfileChanged:
 		state.Name = e.Name
+		state.Type = e.Type
+		state.TotalMember = e.TotalMember
+		state.Province = e.Province
+		state.City = e.City
 
 	case OrganizationVerified:
 		state.Status = e.Status
@@ -105,9 +109,29 @@ func (o *Organization) ChangeProfile(name, orgType, totalMember, province, city 
 		return errors.New("Name cannot be empty")
 	}
 
-	o.TrackChange(OrganizationNameChanged{
-		UID:  o.UID,
-		Name: name,
+	if orgType == "" {
+		return errors.New("Organization type cannot be empty")
+	}
+
+	if totalMember == "" {
+		return errors.New("Total member cannot be empty")
+	}
+
+	if province == "" {
+		return errors.New("Province cannot be empty")
+	}
+
+	if city == "" {
+		return errors.New("City cannot be empty")
+	}
+
+	o.TrackChange(OrganizationProfileChanged{
+		UID:         o.UID,
+		Name:        name,
+		Type:        orgType,
+		TotalMember: totalMember,
+		Province:    province,
+		City:        city,
 	})
 
 	return nil

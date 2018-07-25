@@ -23,6 +23,10 @@ type organizationReadResult struct {
 	Email            string
 	VerificationCode int
 	Status           string
+	Type             sql.NullString
+	TotalMember      sql.NullString
+	Province         sql.NullString
+	City             sql.NullString
 	CreatedDate      time.Time
 }
 
@@ -39,6 +43,10 @@ func (s OrganizationReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryRe
 			&rowsData.Email,
 			&rowsData.VerificationCode,
 			&rowsData.Status,
+			&rowsData.Type,
+			&rowsData.TotalMember,
+			&rowsData.Province,
+			&rowsData.City,
 			&rowsData.CreatedDate,
 		)
 
@@ -55,12 +63,36 @@ func (s OrganizationReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryRe
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgType := ""
+		if rowsData.Type.Valid {
+			orgType = rowsData.Type.String
+		}
+
+		totalMember := ""
+		if rowsData.TotalMember.Valid {
+			totalMember = rowsData.TotalMember.String
+		}
+
+		province := ""
+		if rowsData.Province.Valid {
+			province = rowsData.Province.String
+		}
+
+		city := ""
+		if rowsData.City.Valid {
+			city = rowsData.City.String
+		}
+
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
 			Name:             rowsData.Name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
+			Type:             orgType,
+			TotalMember:      totalMember,
+			Province:         province,
+			City:             city,
 			CreatedDate:      rowsData.CreatedDate,
 		}
 
@@ -84,6 +116,10 @@ func (s OrganizationReadQueryMysql) FindByEmail(email string) <-chan query.Query
 			&rowsData.Email,
 			&rowsData.VerificationCode,
 			&rowsData.Status,
+			&rowsData.Type,
+			&rowsData.TotalMember,
+			&rowsData.Province,
+			&rowsData.City,
 			&rowsData.CreatedDate,
 		)
 
@@ -100,12 +136,36 @@ func (s OrganizationReadQueryMysql) FindByEmail(email string) <-chan query.Query
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgType := ""
+		if rowsData.Type.Valid {
+			orgType = rowsData.Type.String
+		}
+
+		totalMember := ""
+		if rowsData.TotalMember.Valid {
+			totalMember = rowsData.TotalMember.String
+		}
+
+		province := ""
+		if rowsData.Province.Valid {
+			province = rowsData.Province.String
+		}
+
+		city := ""
+		if rowsData.City.Valid {
+			city = rowsData.City.String
+		}
+
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
 			Name:             rowsData.Name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
+			Type:             orgType,
+			TotalMember:      totalMember,
+			Province:         province,
+			City:             city,
 			CreatedDate:      rowsData.CreatedDate,
 		}
 
@@ -129,6 +189,10 @@ func (s OrganizationReadQueryMysql) FindByName(name string) <-chan query.QueryRe
 			&rowsData.Email,
 			&rowsData.VerificationCode,
 			&rowsData.Status,
+			&rowsData.Type,
+			&rowsData.TotalMember,
+			&rowsData.Province,
+			&rowsData.City,
 			&rowsData.CreatedDate,
 		)
 
@@ -145,12 +209,36 @@ func (s OrganizationReadQueryMysql) FindByName(name string) <-chan query.QueryRe
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgType := ""
+		if rowsData.Type.Valid {
+			orgType = rowsData.Type.String
+		}
+
+		totalMember := ""
+		if rowsData.TotalMember.Valid {
+			totalMember = rowsData.TotalMember.String
+		}
+
+		province := ""
+		if rowsData.Province.Valid {
+			province = rowsData.Province.String
+		}
+
+		city := ""
+		if rowsData.City.Valid {
+			city = rowsData.City.String
+		}
+
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
 			Name:             rowsData.Name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
+			Type:             orgType,
+			TotalMember:      totalMember,
+			Province:         province,
+			City:             city,
 			CreatedDate:      rowsData.CreatedDate,
 		}
 
@@ -176,6 +264,10 @@ func (s OrganizationReadQueryMysql) FindByIDAndVerificationCode(uid uuid.UUID, v
 			&rowsData.Email,
 			&rowsData.VerificationCode,
 			&rowsData.Status,
+			&rowsData.Type,
+			&rowsData.TotalMember,
+			&rowsData.Province,
+			&rowsData.City,
 			&rowsData.CreatedDate,
 		)
 
@@ -192,12 +284,36 @@ func (s OrganizationReadQueryMysql) FindByIDAndVerificationCode(uid uuid.UUID, v
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgType := ""
+		if rowsData.Type.Valid {
+			orgType = rowsData.Type.String
+		}
+
+		totalMember := ""
+		if rowsData.TotalMember.Valid {
+			totalMember = rowsData.TotalMember.String
+		}
+
+		province := ""
+		if rowsData.Province.Valid {
+			province = rowsData.Province.String
+		}
+
+		city := ""
+		if rowsData.City.Valid {
+			city = rowsData.City.String
+		}
+
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
 			Name:             rowsData.Name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
+			Type:             orgType,
+			TotalMember:      totalMember,
+			Province:         province,
+			City:             city,
 			CreatedDate:      rowsData.CreatedDate,
 		}
 
@@ -222,6 +338,10 @@ func (s OrganizationReadQueryMysql) FindAll(name string) <-chan query.QueryResul
 			&rowsData.Email,
 			&rowsData.VerificationCode,
 			&rowsData.Status,
+			&rowsData.Type,
+			&rowsData.TotalMember,
+			&rowsData.Province,
+			&rowsData.City,
 			&rowsData.CreatedDate,
 		)
 
@@ -238,12 +358,36 @@ func (s OrganizationReadQueryMysql) FindAll(name string) <-chan query.QueryResul
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgType := ""
+		if rowsData.Type.Valid {
+			orgType = rowsData.Type.String
+		}
+
+		totalMember := ""
+		if rowsData.TotalMember.Valid {
+			totalMember = rowsData.TotalMember.String
+		}
+
+		province := ""
+		if rowsData.Province.Valid {
+			province = rowsData.Province.String
+		}
+
+		city := ""
+		if rowsData.City.Valid {
+			city = rowsData.City.String
+		}
+
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
 			Name:             rowsData.Name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
+			Type:             orgType,
+			TotalMember:      totalMember,
+			Province:         province,
+			City:             city,
 			CreatedDate:      rowsData.CreatedDate,
 		}
 

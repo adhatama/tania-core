@@ -14,9 +14,13 @@ type OrganizationCreated struct {
 	CreatedDate      time.Time
 }
 
-type OrganizationNameChanged struct {
-	UID  uuid.UUID
-	Name string
+type OrganizationProfileChanged struct {
+	UID         uuid.UUID
+	Name        string
+	Type        string
+	TotalMember string
+	Province    string
+	City        string
 }
 
 type OrganizationVerified struct {

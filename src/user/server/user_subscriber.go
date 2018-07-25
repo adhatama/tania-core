@@ -35,6 +35,25 @@ func (s *UserServer) SaveToOrganizationReadModel(event interface{}) error {
 
 		orgRead.Status = e.Status
 
+	case domain.OrganizationProfileChanged:
+		queryResult := <-s.OrganizationReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		org, ok := queryResult.Result.(storage.OrganizationRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		orgRead = &org
+
+		orgRead.Name = e.Name
+		orgRead.Type = e.Type
+		orgRead.TotalMember = e.TotalMember
+		orgRead.Province = e.Province
+		orgRead.City = e.City
+
 	}
 
 	err := <-s.OrganizationReadRepo.Save(orgRead)

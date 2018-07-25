@@ -93,6 +93,7 @@ func NewUserServer(
 func (s *UserServer) InitSubscriber() {
 	s.EventBus.Subscribe("OrganizationCreated", s.SaveToOrganizationReadModel)
 	s.EventBus.Subscribe("OrganizationVerified", s.SaveToOrganizationReadModel)
+	s.EventBus.Subscribe("OrganizationProfileChanged", s.SaveToOrganizationReadModel)
 
 	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordChanged", s.SaveToUserReadModel)

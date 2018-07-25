@@ -40,6 +40,26 @@ func (w *OrganizationEventWrapper) UnmarshalJSON(b []byte) error {
 
 		w.EventData = e
 
+	case "OrganizationVerified":
+		e := domain.OrganizationVerified{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "OrganizationProfileChanged":
+		e := domain.OrganizationProfileChanged{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
 	}
 
 	return nil

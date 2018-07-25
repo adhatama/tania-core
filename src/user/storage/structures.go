@@ -47,5 +47,9 @@ type OrganizationRead struct {
 	Email            string    `json:"email"`
 	VerificationCode int       `json:"verification_code"`
 	Status           string    `json:"status"`
+	Type             string    `json:"type"`
+	TotalMember      string    `json:"total_member"`
+	Province         string    `json:"province"`
+	City             string    `json:"city"`
 	CreatedDate      time.Time `json:"created_date"`
 }

@@ -256,12 +256,16 @@ func initMysql() *sql.DB {
 					panic("Error executing DDL query")
 				}
 
-				// http://dev.mysql.com/doc/refman/5.7/en/error-messages-server.html
-				// We will skip error duplicate key name in database (code: 1061),
-				// because CREATE INDEX doesn't have IF NOT EXISTS clause,
-				// otherwise we will stop the loop and print the error
 				if me.Number == 1061 {
-
+					// http://dev.mysql.com/doc/refman/5.7/en/error-messages-server.html
+					// We will skip error duplicate key name in database (code: 1061),
+					// because CREATE INDEX doesn't have IF NOT EXISTS clause,
+					// otherwise we will stop the loop and print the error
+				} else if me.Number == 1060 {
+					// http://dev.mysql.com/doc/refman/5.7/en/error-messages-server.html
+					// We will skip error duplicate column name in database (code: 1060),
+					// because ALTER TABLE ADD COLUMN doesn't have IF NOT EXISTS clause,
+					// otherwise we will stop the loop and print the error
 				} else {
 					log.Print(err)
 					return db
