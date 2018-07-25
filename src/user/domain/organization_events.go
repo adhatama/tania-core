@@ -8,7 +8,6 @@ import (
 
 type OrganizationCreated struct {
 	UID              uuid.UUID
-	Name             string
 	Email            string
 	VerificationCode int
 	Status           string

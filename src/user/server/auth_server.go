@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"net/smtp"
 	"strconv"
+	"strings"
 
 	"github.com/Tanibox/tania-core/config"
 	"github.com/Tanibox/tania-core/src/eventbus"
@@ -19,6 +21,7 @@ import (
 	repoSqlite "github.com/Tanibox/tania-core/src/user/repository/sqlite"
 	"github.com/Tanibox/tania-core/src/user/storage"
 	"github.com/labstack/echo"
+	"github.com/labstack/gommon/log"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -93,7 +96,7 @@ func NewAuthServer(
 
 // InitSubscriber defines the mapping of which event this domain listen with their handler
 func (s *AuthServer) InitSubscriber() {
-
+	s.EventBus.Subscribe("OrganizationCreated", s.SendEmailSubscriber)
 }
 
 // Mount defines the AuthServer's endpoints with its handlers
@@ -192,18 +195,13 @@ func (s *AuthServer) Authorize(c echo.Context) error {
 }
 
 func (s *AuthServer) RegisterOrganization(c echo.Context) error {
-	name := c.FormValue("name")
 	email := c.FormValue("email")
-
-	if name == "" {
-		return Error(c, errors.New("Name is required"))
-	}
 
 	if email == "" {
 		return Error(c, errors.New("Email is required"))
 	}
 
-	org, err := domain.CreateOrganization(s.OrganizationService, name, email)
+	org, err := domain.CreateOrganization(s.OrganizationService, email)
 	if err != nil {
 		return Error(c, err)
 	}
@@ -482,6 +480,41 @@ func (s *AuthServer) ResetPassword(c echo.Context) error {
 	data["data"] = MapToUserRead(user)
 
 	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
+	// Set up authentication information.
+	auth := smtp.PlainAuth(
+		"",
+		*config.Config.MailUsername,
+		*config.Config.MailPassword,
+		*config.Config.MailHost,
+	)
+
+	recipients := []string{}
+	switch e := event.(type) {
+	case domain.OrganizationCreated:
+		recipients = append(recipients, e.Email)
+	}
+
+	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
+		"To: " + strings.Join(recipients, ",") + "\r\n" +
+		"Subject: Tania Verification Code" + "\r\n\r\n" +
+		"Your verification code is 123546"
+
+	err := smtp.SendMail(
+		*config.Config.MailHost+":"+strconv.Itoa(*config.Config.MailPort),
+		auth,
+		*config.Config.MailSender,
+		recipients,
+		[]byte(composedMsg),
+	)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *AuthServer) publishUncommittedEvents(entity interface{}) error {

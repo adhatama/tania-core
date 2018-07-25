@@ -28,6 +28,13 @@ type Configuration struct {
 	MysqlPassword          *string   `mapstructure:"mysql_password"`
 	RedirectURI            []*string `mapstructure:"redirect_uri"`
 	ClientID               *string   `mapstructure:"client_id"`
+
+	// Mail server configuration
+	MailHost     *string
+	MailPort     *int
+	MailUsername *string
+	MailPassword *string
+	MailSender   *string
 }
 
 /*

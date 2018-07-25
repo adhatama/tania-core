@@ -14,6 +14,10 @@ type Organization struct {
 	Email            string
 	VerificationCode int
 	Status           string
+	Type             string
+	TotalMember      string
+	Province         string
+	City             string
 	CreatedDate      time.Time
 
 	// Events
@@ -40,7 +44,6 @@ func (state *Organization) Transition(event interface{}) {
 	switch e := event.(type) {
 	case OrganizationCreated:
 		state.UID = e.UID
-		state.Name = e.Name
 		state.Email = e.Email
 		state.VerificationCode = e.VerificationCode
 		state.Status = e.Status
@@ -55,7 +58,7 @@ func (state *Organization) Transition(event interface{}) {
 	}
 }
 
-func CreateOrganization(orgService OrganizationService, name, email string) (*Organization, error) {
+func CreateOrganization(orgService OrganizationService, email string) (*Organization, error) {
 	if email == "" {
 		return nil, errors.New("Email cannot be empty")
 	}
@@ -69,10 +72,6 @@ func CreateOrganization(orgService OrganizationService, name, email string) (*Or
 		return nil, errors.New("Email already exists")
 	}
 
-	if name == "" {
-		return nil, errors.New("Name cannot be empty")
-	}
-
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return nil, err
@@ -84,7 +83,6 @@ func CreateOrganization(orgService OrganizationService, name, email string) (*Or
 
 	org := &Organization{
 		UID:              uid,
-		Name:             name,
 		Email:            email,
 		VerificationCode: code,
 		Status:           OrganizationStatusPendingConfirmation,
@@ -93,7 +91,6 @@ func CreateOrganization(orgService OrganizationService, name, email string) (*Or
 
 	org.TrackChange(OrganizationCreated{
 		UID:              org.UID,
-		Name:             org.Name,
 		Email:            org.Email,
 		VerificationCode: org.VerificationCode,
 		Status:           org.Status,
@@ -103,7 +100,7 @@ func CreateOrganization(orgService OrganizationService, name, email string) (*Or
 	return org, nil
 }
 
-func (o *Organization) ChangeName(name string) error {
+func (o *Organization) ChangeProfile(name, orgType, totalMember, province, city string) error {
 	if name == "" {
 		return errors.New("Name cannot be empty")
 	}

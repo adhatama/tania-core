@@ -16,7 +16,6 @@ func (s *UserServer) SaveToOrganizationReadModel(event interface{}) error {
 	case domain.OrganizationCreated:
 		orgRead.UID = e.UID
 		orgRead.Email = e.Email
-		orgRead.Name = e.Name
 		orgRead.VerificationCode = e.VerificationCode
 		orgRead.Status = e.Status
 		orgRead.CreatedDate = e.CreatedDate
