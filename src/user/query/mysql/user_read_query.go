@@ -20,11 +20,15 @@ func NewUserReadQueryMysql(db *sql.DB) query.UserReadQuery {
 }
 
 type userReadResult struct {
-	UID         []byte
-	Email       string
-	Password    string
-	CreatedDate time.Time
-	LastUpdated time.Time
+	UID             []byte
+	Email           string
+	Password        string
+	Role            string
+	Status          string
+	InvitationCode  int
+	OrganizationUID []byte
+	CreatedDate     time.Time
+	LastUpdated     time.Time
 }
 
 func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
@@ -34,11 +38,16 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, ROLE, STATUS, INVITATION_CODE,
+			ORGANIZATION_UID, CREATED_DATE, LAST_UPDATED
 			FROM USER_READ WHERE UID = ?`, uid.Bytes()).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.Password,
+			&rowsData.Role,
+			&rowsData.Status,
+			&rowsData.InvitationCode,
+			&rowsData.OrganizationUID,
 			&rowsData.CreatedDate,
 			&rowsData.LastUpdated,
 		)
@@ -56,12 +65,21 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 			result <- query.QueryResult{Error: err}
 		}
 
+		orgUID, err := uuid.FromBytes(rowsData.OrganizationUID)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
 		userRead = storage.UserRead{
-			UID:         userUID,
-			Email:       rowsData.Email,
-			Password:    []byte(rowsData.Password),
-			CreatedDate: rowsData.CreatedDate,
-			LastUpdated: rowsData.LastUpdated,
+			UID:             userUID,
+			Email:           rowsData.Email,
+			Password:        []byte(rowsData.Password),
+			Role:            rowsData.Role,
+			Status:          rowsData.Status,
+			InvitationCode:  rowsData.InvitationCode,
+			OrganizationUID: orgUID,
+			CreatedDate:     rowsData.CreatedDate,
+			LastUpdated:     rowsData.LastUpdated,
 		}
 
 		result <- query.QueryResult{Result: userRead}

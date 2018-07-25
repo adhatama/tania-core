@@ -363,7 +363,7 @@ func (s *AuthServer) VerifyUser(c echo.Context) error {
 		return Error(c, err)
 	}
 
-	err = <-s.OrganizationEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	err = <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
 	if err != nil {
 		return Error(c, err)
 	}

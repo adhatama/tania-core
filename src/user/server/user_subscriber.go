@@ -77,6 +77,21 @@ func (s *UserServer) SaveToUserReadModel(event interface{}) error {
 		userRead.Password = e.NewPassword
 		userRead.LastUpdated = e.DateChanged
 
+	case domain.UserVerified:
+		queryResult := <-s.UserReadQuery.FindByID(e.UID)
+		if queryResult.Error != nil {
+			log.Error(queryResult.Error)
+		}
+
+		u, ok := queryResult.Result.(storage.UserRead)
+		if !ok {
+			log.Error(errors.New("Internal server error. Error type assertion"))
+		}
+
+		userRead = &u
+
+		userRead.Status = e.Status
+
 	}
 
 	err := <-s.UserReadRepo.Save(userRead)
