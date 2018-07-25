@@ -96,6 +96,8 @@ func (s *UserServer) InitSubscriber() {
 
 	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordChanged", s.SaveToUserReadModel)
+
+	s.EventBus.Subscribe("UserCreated", s.SaveToAuthModel)
 }
 
 // Mount defines the UserServer's endpoints with its handlers

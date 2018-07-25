@@ -191,3 +191,55 @@ func (s UserReadQuerySqlite) FindByUsernameAndPassword(username, password string
 
 	return result
 }
+
+func (s UserReadQuerySqlite) FindByOrganizationIDAndInvitationCode(orgUID uuid.UUID, invitationCode int) <-chan query.QueryResult {
+	result := make(chan query.QueryResult)
+
+	go func() {
+		userRead := storage.UserRead{}
+		rowsData := userReadResult{}
+
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, CREATED_DATE, LAST_UPDATED FROM USER_READ
+			WHERE ORGANIZATION_UID = ? AND INVITATION_CODE = ?`, orgUID.Bytes(), invitationCode).Scan(
+			&rowsData.UID,
+			&rowsData.Email,
+			&rowsData.CreatedDate,
+			&rowsData.LastUpdated,
+		)
+
+		if err != nil && err != sql.ErrNoRows {
+			result <- query.QueryResult{Error: err}
+		}
+
+		if err == sql.ErrNoRows {
+			result <- query.QueryResult{Result: userRead}
+		}
+
+		userUID, err := uuid.FromString(rowsData.UID)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
+		createdDate, err := time.Parse(time.RFC3339, rowsData.CreatedDate)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
+		lastUpdated, err := time.Parse(time.RFC3339, rowsData.LastUpdated)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
+		userRead = storage.UserRead{
+			UID:         userUID,
+			Email:       rowsData.Email,
+			CreatedDate: createdDate,
+			LastUpdated: lastUpdated,
+		}
+
+		result <- query.QueryResult{Result: userRead}
+		close(result)
+	}()
+
+	return result
+}

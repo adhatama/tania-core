@@ -129,9 +129,6 @@ func main() {
 		e.Logger.Fatal(err)
 	}
 
-	// Initialize user
-	err = initUser(authServer)
-
 	// Initialize Echo Middleware
 	e.Use(middleware.Recover())
 	e.Use(headerNoCache)
@@ -168,26 +165,6 @@ func main() {
 
 	// Start Server
 	e.Logger.Fatal(e.Start(":" + *config.Config.AppPort))
-}
-
-func initUser(authServer *userserver.AuthServer) error {
-	defaultOrganizationUID, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
-
-	defaultUsername := "tania"
-	defaultPassword := "tania"
-
-	_, _, err = authServer.RegisterNewUser(defaultOrganizationUID, defaultUsername, defaultPassword, defaultPassword)
-	if err != nil {
-		log.Print("User ", defaultUsername, " has already created")
-		return err
-	}
-
-	log.Print("User created with default username and password")
-
-	return nil
 }
 
 // MIDDLEWARES

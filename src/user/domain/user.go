@@ -56,6 +56,10 @@ func (state *User) Transition(event interface{}) {
 		state.UID = e.UID
 		state.Email = e.Email
 		state.Password = e.Password
+		state.Role = e.Role
+		state.Status = e.Status
+		state.InvitationCode = e.InvitationCode
+		state.OrganizationUID = e.OrganizationUID
 		state.CreatedDate = e.CreatedDate
 		state.LastUpdated = e.LastUpdated
 
@@ -104,6 +108,11 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, passw
 	rand.Seed(time.Now().UnixNano())
 	code := 100000 + rand.Intn(900000)
 
+	status := UserStatusPendingConfirmation
+	if role == UserRoleAdmin {
+		status = UserStatusConfirmed
+	}
+
 	user := &User{
 		UID:             uid,
 		Email:           email,
@@ -111,7 +120,7 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, passw
 		OrganizationUID: organizationUID,
 		InvitationCode:  code,
 		Role:            role,
-		Status:          UserStatusPendingConfirmation,
+		Status:          status,
 	}
 
 	now := time.Now()

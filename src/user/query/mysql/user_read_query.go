@@ -34,7 +34,8 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE UID = ?", uid.Bytes()).Scan(
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED
+			FROM USER_READ WHERE UID = ?`, uid.Bytes()).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.Password,
@@ -77,7 +78,8 @@ func (s UserReadQueryMysql) FindByUsername(email string) <-chan query.QueryResul
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow("SELECT * FROM USER_READ WHERE USERNAME = ?", email).Scan(
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED
+			FROM USER_READ WHERE EMAIL = ?`, email).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.Password,
@@ -120,8 +122,8 @@ func (s UserReadQueryMysql) FindByUsernameAndPassword(email, password string) <-
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow(`SELECT * FROM USER_READ
-			WHERE USERNAME = ?`, email).Scan(
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED
+			FROM USER_READ WHERE EMAIL = ?`, email).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.Password,
@@ -151,6 +153,49 @@ func (s UserReadQueryMysql) FindByUsernameAndPassword(email, password string) <-
 			UID:         userUID,
 			Email:       rowsData.Email,
 			Password:    []byte(rowsData.Password),
+			CreatedDate: rowsData.CreatedDate,
+			LastUpdated: rowsData.LastUpdated,
+		}
+
+		result <- query.QueryResult{Result: userRead}
+		close(result)
+	}()
+
+	return result
+}
+
+func (s UserReadQueryMysql) FindByOrganizationIDAndInvitationCode(orgUID uuid.UUID, invitationCode int) <-chan query.QueryResult {
+	result := make(chan query.QueryResult)
+
+	go func() {
+		userRead := storage.UserRead{}
+		rowsData := userReadResult{}
+
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, CREATED_DATE, LAST_UPDATED
+			FROM USER_READ WHERE ORGANIZATION_UID = ? AND INVITATION_CODE = ?`,
+			orgUID.Bytes(), invitationCode).Scan(
+			&rowsData.UID,
+			&rowsData.Email,
+			&rowsData.CreatedDate,
+			&rowsData.LastUpdated,
+		)
+
+		if err != nil && err != sql.ErrNoRows {
+			result <- query.QueryResult{Error: err}
+		}
+
+		if err == sql.ErrNoRows {
+			result <- query.QueryResult{Result: userRead}
+		}
+
+		userUID, err := uuid.FromBytes(rowsData.UID)
+		if err != nil {
+			result <- query.QueryResult{Error: err}
+		}
+
+		userRead = storage.UserRead{
+			UID:         userUID,
+			Email:       rowsData.Email,
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,
 		}

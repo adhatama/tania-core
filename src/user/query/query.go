@@ -10,6 +10,7 @@ type UserReadQuery interface {
 	FindByID(userUID uuid.UUID) <-chan QueryResult
 	FindByUsername(username string) <-chan QueryResult
 	FindByUsernameAndPassword(username, password string) <-chan QueryResult
+	FindByOrganizationIDAndInvitationCode(organizationUID uuid.UUID, invitationCode int) <-chan QueryResult
 }
 
 type UserAuthQuery interface {

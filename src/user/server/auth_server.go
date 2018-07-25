@@ -100,8 +100,9 @@ func (s *AuthServer) InitSubscriber() {
 func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("authorize", s.Authorize)
 	g.POST("register/organization", s.RegisterOrganization)
-	g.POST("organization/verification", s.OrganizationVerification)
-	g.POST("register", s.Register)
+	g.POST("organization/verification", s.VerifyOrganization)
+	g.POST("register/user", s.RegisterUser)
+	g.POST("user/verification", s.VerifyUser)
 }
 
 func (s *AuthServer) Authorize(c echo.Context) error {
@@ -218,7 +219,8 @@ func (s *AuthServer) RegisterOrganization(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func (s *AuthServer) OrganizationVerification(c echo.Context) error {
+func (s *AuthServer) VerifyOrganization(c echo.Context) error {
+	// Validate
 	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
 	if err != nil {
 		return Error(c, err)
@@ -252,6 +254,7 @@ func (s *AuthServer) OrganizationVerification(c echo.Context) error {
 		return Error(c, errors.New("Organization is already confirmed"))
 	}
 
+	// Process
 	eventQueryResult := <-s.OrganizationEventQuery.FindAllByID(orgRead.UID)
 	if eventQueryResult.Error != nil {
 		return Error(c, eventQueryResult.Error)
@@ -278,24 +281,32 @@ func (s *AuthServer) OrganizationVerification(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func (s *AuthServer) Register(c echo.Context) error {
+func (s *AuthServer) RegisterUser(c echo.Context) error {
 	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
 	if err != nil {
 		return Error(c, err)
 	}
 
-	username := c.FormValue("username")
+	email := c.FormValue("email")
 	password := c.FormValue("password")
 	confirmPassword := c.FormValue("confirm_password")
+	role := c.FormValue("role")
 
 	if password != confirmPassword {
 		return Error(c, errors.New("Confirm password didn't match"))
 	}
 
-	user, _, err := s.RegisterNewUser(organizationUID, username, password, confirmPassword)
+	user, err := domain.CreateUser(s.UserService, organizationUID, email, password, role)
 	if err != nil {
 		return Error(c, err)
 	}
+
+	err = <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	s.publishUncommittedEvents(user)
 
 	data := make(map[string]storage.UserRead)
 	data["data"] = MapToUserRead(user)
@@ -303,30 +314,66 @@ func (s *AuthServer) Register(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-// RegisterNewUser is used to call the behaviour and persist it
-// It is used by the register handler and in the initial user creation
-func (s *AuthServer) RegisterNewUser(organizationUID uuid.UUID, email, password, confirmPassword string) (*domain.User, *storage.UserAuth, error) {
-	user, err := domain.CreateUser(s.UserService, organizationUID, email, password, confirmPassword)
+func (s *AuthServer) VerifyUser(c echo.Context) error {
+	// Validate
+	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
 	if err != nil {
-		return nil, nil, err
+		return Error(c, err)
 	}
 
-	err = <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	invitationCode := c.FormValue("invitation_code")
+	code, err := strconv.Atoi(invitationCode)
 	if err != nil {
-		return nil, nil, err
+		return Error(c, err)
 	}
 
-	userAuth := storage.UserAuth{
-		UserUID:     user.UID,
-		CreatedDate: user.CreatedDate,
-		LastUpdated: user.LastUpdated,
+	if invitationCode == "" {
+		return Error(c, errors.New("Invitation code is required"))
 	}
 
-	err = <-s.UserAuthRepo.Save(&userAuth)
+	queryResult := <-s.UserReadQuery.FindByOrganizationIDAndInvitationCode(organizationUID, code)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	userRead, ok := queryResult.Result.(storage.UserRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if userRead.UID == (uuid.UUID{}) {
+		return Error(c, errors.New("Invitation code not found"))
+	}
+
+	if userRead.Status == domain.UserStatusConfirmed {
+		return Error(c, errors.New("User is already confirmed"))
+	}
+
+	// Process
+	eventQueryResult := <-s.UserEventQuery.FindAllByID(userRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.UserEvent)
+	user := repository.NewUserFromHistory(events)
+
+	err = user.VerifyInvitation()
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.OrganizationEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
 
 	s.publishUncommittedEvents(user)
 
-	return user, &userAuth, nil
+	data := make(map[string]interface{})
+	data["data"] = user
+
+	return c.JSON(http.StatusOK, data)
 }
 
 func (s *AuthServer) publishUncommittedEvents(entity interface{}) error {

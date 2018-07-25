@@ -27,10 +27,11 @@ func (f *UserReadRepositoryMysql) Save(userRead *storage.UserRead) <-chan error 
 
 		if count > 0 {
 			_, err := f.DB.Exec(`UPDATE USER_READ SET
-				EMAIL = ?, PASSWORD = ?,
-				CREATED_DATE = ?, LAST_UPDATED = ?
+				EMAIL = ?, PASSWORD = ?, ROLE = ?, STATUS = ?, ORGANIZATION_UID = ?,
+				INVITATION_CODE = ?, CREATED_DATE = ?, LAST_UPDATED = ?
 				WHERE UID = ?`,
-				userRead.Email, userRead.Password,
+				userRead.Email, userRead.Password, userRead.Role, userRead.Status,
+				userRead.OrganizationUID.Bytes(), userRead.InvitationCode,
 				userRead.CreatedDate, userRead.LastUpdated,
 				userRead.UID.Bytes())
 
@@ -39,9 +40,11 @@ func (f *UserReadRepositoryMysql) Save(userRead *storage.UserRead) <-chan error 
 			}
 		} else {
 			_, err := f.DB.Exec(`INSERT INTO USER_READ
-				(UID, EMAIL, PASSWORD, CREATED_DATE, LAST_UPDATED)
-				VALUES (?, ?, ?, ?, ?)`,
+				(UID, EMAIL, PASSWORD, ROLE, STATUS, ORGANIZATION_UID, INVITATION_CODE,
+					CREATED_DATE, LAST_UPDATED)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ? ,?)`,
 				userRead.UID.Bytes(), userRead.Email, userRead.Password,
+				userRead.Role, userRead.Status, userRead.OrganizationUID.Bytes(), userRead.InvitationCode,
 				userRead.CreatedDate, userRead.LastUpdated)
 
 			if err != nil {
