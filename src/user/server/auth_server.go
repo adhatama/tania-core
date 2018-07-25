@@ -492,15 +492,19 @@ func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
 	)
 
 	recipients := []string{}
+	code := ""
+	subject := ""
 	switch e := event.(type) {
 	case domain.OrganizationCreated:
+		subject = "Tania Kode Verifikasi untuk Pendaftaran Organisasi Baru"
 		recipients = append(recipients, e.Email)
+		code = strconv.Itoa(e.VerificationCode)
 	}
 
 	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
 		"To: " + strings.Join(recipients, ",") + "\r\n" +
-		"Subject: Tania Verification Code" + "\r\n\r\n" +
-		"Your verification code is 123546"
+		"Subject: " + subject + "\r\n\r\n" +
+		"Kode verifikasi Anda adalah " + code
 
 	err := smtp.SendMail(
 		*config.Config.MailHost+":"+strconv.Itoa(*config.Config.MailPort),
