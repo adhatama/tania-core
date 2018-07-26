@@ -106,6 +106,8 @@ func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("register/organization", s.RegisterOrganization)
 	g.POST("organization/verification", s.VerifyOrganization)
 	g.POST("organization/profile/:id", s.EditOrganizationProfile)
+	g.GET("organization/email/:email", s.CheckOrganizationEmail)
+	g.GET("organization", s.GetOrganization)
 
 	g.POST("register/user", s.RegisterUser)
 	g.POST("user/verification", s.VerifyUser)
@@ -537,6 +539,45 @@ func (s *AuthServer) ResetPassword(c echo.Context) error {
 	data["data"] = MapToUserRead(user)
 
 	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) CheckOrganizationEmail(c echo.Context) error {
+	email := c.Param("email")
+
+	if email == "" {
+		return Error(c, NewRequestValidationError(REQUIRED, "email"))
+	}
+
+	queryResult := <-s.OrganizationReadQuery.FindByEmail(email)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	org, ok := queryResult.Result.(storage.OrganizationRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	data := make(map[string]interface{})
+	orgSimple := struct {
+		UID    uuid.UUID `json:"uid"`
+		Name   string    `json:"name"`
+		Email  string    `json:"email"`
+		Status string    `json:"status"`
+	}{
+		UID:    org.UID,
+		Name:   org.Name,
+		Email:  org.Email,
+		Status: org.Status,
+	}
+
+	data["data"] = orgSimple
+
+	return c.JSON(http.StatusOK, data)
+}
+
+func (s *AuthServer) GetOrganization(c echo.Context) error {
+	return nil
 }
 
 func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
