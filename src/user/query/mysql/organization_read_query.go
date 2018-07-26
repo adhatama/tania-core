@@ -348,75 +348,78 @@ func (s OrganizationReadQueryMysql) FindAll(name string) <-chan query.QueryResul
 	result := make(chan query.QueryResult)
 
 	go func() {
-		orgRead := storage.OrganizationRead{}
 		rowsData := organizationReadResult{}
+		orgReadList := []storage.OrganizationRead{}
 
-		err := s.DB.QueryRow(`SELECT * FROM ORGANIZATION_READ
-			WHERE NAME LIKE ?`, "%"+name+"%").Scan(
-			&rowsData.UID,
-			&rowsData.Name,
-			&rowsData.Email,
-			&rowsData.VerificationCode,
-			&rowsData.Status,
-			&rowsData.Type,
-			&rowsData.TotalMember,
-			&rowsData.Province,
-			&rowsData.City,
-			&rowsData.CreatedDate,
-		)
-
-		if err != nil && err != sql.ErrNoRows {
-			result <- query.QueryResult{Error: err}
-		}
-
-		if err == sql.ErrNoRows {
-			result <- query.QueryResult{Result: orgRead}
-		}
-
-		orgUID, err := uuid.FromBytes(rowsData.UID)
+		rows, err := s.DB.Query(`SELECT * FROM ORGANIZATION_READ
+			WHERE NAME LIKE ?`, "%"+name+"%")
 		if err != nil {
 			result <- query.QueryResult{Error: err}
 		}
+		defer rows.Close()
 
-		name := ""
-		if rowsData.Name.Valid {
-			name = rowsData.Name.String
+		for rows.Next() {
+			err = rows.Scan(
+				&rowsData.UID,
+				&rowsData.Name,
+				&rowsData.Email,
+				&rowsData.VerificationCode,
+				&rowsData.Status,
+				&rowsData.Type,
+				&rowsData.TotalMember,
+				&rowsData.Province,
+				&rowsData.City,
+				&rowsData.CreatedDate,
+			)
+			if err != nil {
+				result <- query.QueryResult{Error: err}
+			}
+
+			orgUID, err := uuid.FromBytes(rowsData.UID)
+			if err != nil {
+				result <- query.QueryResult{Error: err}
+			}
+
+			name := ""
+			if rowsData.Name.Valid {
+				name = rowsData.Name.String
+			}
+
+			orgType := ""
+			if rowsData.Type.Valid {
+				orgType = rowsData.Type.String
+			}
+
+			totalMember := ""
+			if rowsData.TotalMember.Valid {
+				totalMember = rowsData.TotalMember.String
+			}
+
+			province := ""
+			if rowsData.Province.Valid {
+				province = rowsData.Province.String
+			}
+
+			city := ""
+			if rowsData.City.Valid {
+				city = rowsData.City.String
+			}
+
+			orgReadList = append(orgReadList, storage.OrganizationRead{
+				UID:              orgUID,
+				Name:             name,
+				Email:            rowsData.Email,
+				VerificationCode: rowsData.VerificationCode,
+				Status:           rowsData.Status,
+				Type:             orgType,
+				TotalMember:      totalMember,
+				Province:         province,
+				City:             city,
+				CreatedDate:      rowsData.CreatedDate,
+			})
 		}
 
-		orgType := ""
-		if rowsData.Type.Valid {
-			orgType = rowsData.Type.String
-		}
-
-		totalMember := ""
-		if rowsData.TotalMember.Valid {
-			totalMember = rowsData.TotalMember.String
-		}
-
-		province := ""
-		if rowsData.Province.Valid {
-			province = rowsData.Province.String
-		}
-
-		city := ""
-		if rowsData.City.Valid {
-			city = rowsData.City.String
-		}
-
-		orgRead = storage.OrganizationRead{
-			UID:              orgUID,
-			Name:             name,
-			Email:            rowsData.Email,
-			VerificationCode: rowsData.VerificationCode,
-			Status:           rowsData.Status,
-			Type:             orgType,
-			TotalMember:      totalMember,
-			Province:         province,
-			City:             city,
-			CreatedDate:      rowsData.CreatedDate,
-		}
-
-		result <- query.QueryResult{Result: orgRead}
+		result <- query.QueryResult{Result: orgReadList}
 		close(result)
 	}()
 

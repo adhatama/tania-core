@@ -107,7 +107,7 @@ func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("organization/verification", s.VerifyOrganization)
 	g.POST("organization/profile/:id", s.EditOrganizationProfile)
 	g.GET("organization/email/:email", s.CheckOrganizationEmail)
-	g.GET("organization", s.GetOrganization)
+	g.GET("organization", s.GetAllOrganization)
 
 	g.POST("register/user", s.RegisterUser)
 	g.POST("user/verification", s.VerifyUser)
@@ -576,8 +576,46 @@ func (s *AuthServer) CheckOrganizationEmail(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func (s *AuthServer) GetOrganization(c echo.Context) error {
-	return nil
+func (s *AuthServer) GetAllOrganization(c echo.Context) error {
+	name := c.QueryParam("name")
+
+	if name != "" {
+		if len(name) < 3 {
+			return Error(c, NewRequestValidationError(INVALID, "Name must have minimum of 3 characters"))
+		}
+	}
+
+	queryResult := <-s.OrganizationReadQuery.FindAll(name)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	orgs, ok := queryResult.Result.([]storage.OrganizationRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	data := make(map[string]interface{})
+	simpleList := []interface{}{}
+	for _, v := range orgs {
+		o := struct {
+			UID    uuid.UUID `json:"uid"`
+			Name   string    `json:"name"`
+			Email  string    `json:"email"`
+			Status string    `json:"status"`
+		}{
+			UID:    v.UID,
+			Name:   v.Name,
+			Email:  v.Email,
+			Status: v.Status,
+		}
+
+		simpleList = append(simpleList, o)
+	}
+
+	data["data"] = simpleList
+
+	return c.JSON(http.StatusOK, data)
 }
 
 func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
