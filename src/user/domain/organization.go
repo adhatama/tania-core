@@ -104,9 +104,18 @@ func CreateOrganization(orgService OrganizationService, email string) (*Organiza
 	return org, nil
 }
 
-func (o *Organization) ChangeProfile(name, orgType, totalMember, province, city string) error {
+func (o *Organization) ChangeProfile(orgService OrganizationService, name, orgType, totalMember, province, city string) error {
 	if name == "" {
 		return errors.New("Name cannot be empty")
+	}
+
+	org, err := orgService.FindByName(name)
+	if err != nil {
+		return err
+	}
+
+	if org.UID != (uuid.UUID{}) && org.UID != o.UID {
+		return errors.New("Organization name is already used")
 	}
 
 	if orgType == "" {

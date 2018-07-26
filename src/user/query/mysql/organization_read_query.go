@@ -19,7 +19,7 @@ func NewOrganizationReadQueryMysql(db *sql.DB) query.OrganizationReadQuery {
 
 type organizationReadResult struct {
 	UID              []byte
-	Name             string
+	Name             sql.NullString
 	Email            string
 	VerificationCode int
 	Status           string
@@ -63,6 +63,11 @@ func (s OrganizationReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryRe
 			result <- query.QueryResult{Error: err}
 		}
 
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
 		orgType := ""
 		if rowsData.Type.Valid {
 			orgType = rowsData.Type.String
@@ -85,7 +90,7 @@ func (s OrganizationReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryRe
 
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
-			Name:             rowsData.Name,
+			Name:             name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
@@ -136,6 +141,11 @@ func (s OrganizationReadQueryMysql) FindByEmail(email string) <-chan query.Query
 			result <- query.QueryResult{Error: err}
 		}
 
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
 		orgType := ""
 		if rowsData.Type.Valid {
 			orgType = rowsData.Type.String
@@ -158,7 +168,7 @@ func (s OrganizationReadQueryMysql) FindByEmail(email string) <-chan query.Query
 
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
-			Name:             rowsData.Name,
+			Name:             name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
@@ -209,6 +219,11 @@ func (s OrganizationReadQueryMysql) FindByName(name string) <-chan query.QueryRe
 			result <- query.QueryResult{Error: err}
 		}
 
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
 		orgType := ""
 		if rowsData.Type.Valid {
 			orgType = rowsData.Type.String
@@ -231,7 +246,7 @@ func (s OrganizationReadQueryMysql) FindByName(name string) <-chan query.QueryRe
 
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
-			Name:             rowsData.Name,
+			Name:             name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
@@ -284,6 +299,11 @@ func (s OrganizationReadQueryMysql) FindByIDAndVerificationCode(uid uuid.UUID, v
 			result <- query.QueryResult{Error: err}
 		}
 
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
 		orgType := ""
 		if rowsData.Type.Valid {
 			orgType = rowsData.Type.String
@@ -306,7 +326,7 @@ func (s OrganizationReadQueryMysql) FindByIDAndVerificationCode(uid uuid.UUID, v
 
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
-			Name:             rowsData.Name,
+			Name:             name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,
@@ -358,6 +378,11 @@ func (s OrganizationReadQueryMysql) FindAll(name string) <-chan query.QueryResul
 			result <- query.QueryResult{Error: err}
 		}
 
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
 		orgType := ""
 		if rowsData.Type.Valid {
 			orgType = rowsData.Type.String
@@ -380,7 +405,7 @@ func (s OrganizationReadQueryMysql) FindAll(name string) <-chan query.QueryResul
 
 		orgRead = storage.OrganizationRead{
 			UID:              orgUID,
-			Name:             rowsData.Name,
+			Name:             name,
 			Email:            rowsData.Email,
 			VerificationCode: rowsData.VerificationCode,
 			Status:           rowsData.Status,

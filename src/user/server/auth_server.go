@@ -217,7 +217,7 @@ func (s *AuthServer) RegisterOrganization(c echo.Context) error {
 	s.publishUncommittedEvents(org)
 
 	data := make(map[string]interface{})
-	data["data"] = org
+	data["data"] = MapToOrganizationRead(org)
 
 	return c.JSON(http.StatusOK, data)
 }
@@ -279,7 +279,7 @@ func (s *AuthServer) VerifyOrganization(c echo.Context) error {
 	s.publishUncommittedEvents(org)
 
 	data := make(map[string]interface{})
-	data["data"] = organizationUID
+	data["data"] = MapToOrganizationRead(org)
 
 	return c.JSON(http.StatusOK, data)
 }
@@ -320,7 +320,7 @@ func (s *AuthServer) EditOrganizationProfile(c echo.Context) error {
 	events := eventQueryResult.Result.([]storage.OrganizationEvent)
 	org := repository.NewOrganizationFromHistory(events)
 
-	err = org.ChangeProfile(name, orgType, totalMember, province, city)
+	err = org.ChangeProfile(s.OrganizationService, name, orgType, totalMember, province, city)
 	if err != nil {
 		return Error(c, err)
 	}
@@ -333,7 +333,7 @@ func (s *AuthServer) EditOrganizationProfile(c echo.Context) error {
 	s.publishUncommittedEvents(org)
 
 	data := make(map[string]interface{})
-	data["data"] = organizationUID
+	data["data"] = MapToOrganizationRead(org)
 
 	return c.JSON(http.StatusOK, data)
 }

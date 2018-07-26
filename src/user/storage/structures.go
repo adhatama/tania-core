@@ -45,7 +45,7 @@ type OrganizationRead struct {
 	UID              uuid.UUID `json:"uid"`
 	Name             string    `json:"name"`
 	Email            string    `json:"email"`
-	VerificationCode int       `json:"verification_code"`
+	VerificationCode int       `json:"-"`
 	Status           string    `json:"status"`
 	Type             string    `json:"type"`
 	TotalMember      string    `json:"total_member"`

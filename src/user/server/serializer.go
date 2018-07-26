@@ -17,3 +17,18 @@ func MapToUserRead(user *domain.User) storage.UserRead {
 
 	return userRead
 }
+
+func MapToOrganizationRead(org *domain.Organization) storage.OrganizationRead {
+	orgRead := storage.OrganizationRead{}
+	orgRead.UID = org.UID
+	orgRead.Name = org.Name
+	orgRead.Email = org.Email
+	orgRead.Status = org.Status
+	orgRead.Type = org.Type
+	orgRead.TotalMember = org.TotalMember
+	orgRead.Province = org.Province
+	orgRead.City = org.City
+	orgRead.CreatedDate = org.CreatedDate
+
+	return orgRead
+}

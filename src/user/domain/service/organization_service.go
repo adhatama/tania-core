@@ -44,10 +44,6 @@ func (s OrganizationServiceImpl) FindByName(name string) (domain.Organization, e
 		return domain.Organization{}, errors.New("Error type assertion")
 	}
 
-	if orgRead.UID == (uuid.UUID{}) {
-		return domain.Organization{}, errors.New("Email not found")
-	}
-
 	org := domain.Organization{
 		UID:              orgRead.UID,
 		Name:             orgRead.Name,
