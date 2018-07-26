@@ -33,6 +33,7 @@ type OrganizationService interface {
 const (
 	OrganizationStatusPendingConfirmation = "PENDING_CONFIRMATION"
 	OrganizationStatusConfirmed           = "CONFIRMED"
+	OrganizationStatusCompleted           = "COMPLETED"
 )
 
 func (state *Organization) TrackChange(event interface{}) {
@@ -141,6 +142,7 @@ func (o *Organization) ChangeProfile(orgService OrganizationService, name, orgTy
 		TotalMember: totalMember,
 		Province:    province,
 		City:        city,
+		Status:      OrganizationStatusCompleted,
 	})
 
 	return nil

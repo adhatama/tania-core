@@ -14,16 +14,22 @@ type UserEvent struct {
 }
 
 type UserRead struct {
-	UID               uuid.UUID `json:"uid"`
-	Email             string    `json:"email"`
-	Password          []byte    `json:"-"`
-	Role              string    `json:"role"`
-	Status            string    `json:"status"`
-	OrganizationUID   uuid.UUID `json:"organization_uid"`
-	InvitationCode    int       `json:"-"`
-	ResetPasswordCode int       `json:"-"`
-	CreatedDate       time.Time `json:"created_date"`
-	LastUpdated       time.Time `json:"last_updated"`
+	UID             uuid.UUID `json:"uid"`
+	Email           string    `json:"email"`
+	Password        []byte    `json:"-"`
+	Role            string    `json:"role"`
+	Status          string    `json:"status"`
+	OrganizationUID uuid.UUID `json:"organization_uid"`
+
+	Name      string    `json:"name"`
+	Gender    string    `json:"gender"`
+	BirthDate time.Time `json:"birth_date"`
+
+	InvitationCode    int `json:"-"`
+	ResetPasswordCode int `json:"-"`
+
+	CreatedDate time.Time `json:"created_date"`
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 type UserAuth struct {

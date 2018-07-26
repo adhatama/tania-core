@@ -22,9 +22,12 @@ func NewUserReadQueryMysql(db *sql.DB) query.UserReadQuery {
 type userReadResult struct {
 	UID             []byte
 	Email           string
-	Password        string
+	Password        sql.NullString
 	Role            string
 	Status          string
+	Name            sql.NullString
+	Gender          sql.NullString
+	BirthDate       sql.NullString
 	InvitationCode  int
 	OrganizationUID []byte
 	CreatedDate     time.Time
@@ -38,14 +41,18 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 		userRead := storage.UserRead{}
 		rowsData := userReadResult{}
 
-		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, ROLE, STATUS, INVITATION_CODE,
-			ORGANIZATION_UID, CREATED_DATE, LAST_UPDATED
+		err := s.DB.QueryRow(`SELECT UID, EMAIL, PASSWORD, ROLE, STATUS,
+			NAME, GENDER, BIRTH_DATE,
+			INVITATION_CODE, ORGANIZATION_UID, CREATED_DATE, LAST_UPDATED
 			FROM USER_READ WHERE UID = ?`, uid.Bytes()).Scan(
 			&rowsData.UID,
 			&rowsData.Email,
 			&rowsData.Password,
 			&rowsData.Role,
 			&rowsData.Status,
+			&rowsData.Name,
+			&rowsData.Gender,
+			&rowsData.BirthDate,
 			&rowsData.InvitationCode,
 			&rowsData.OrganizationUID,
 			&rowsData.CreatedDate,
@@ -70,12 +77,39 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 			result <- query.QueryResult{Error: err}
 		}
 
+		password := ""
+		if rowsData.Password.Valid {
+			password = rowsData.Password.String
+		}
+
+		name := ""
+		if rowsData.Name.Valid {
+			name = rowsData.Name.String
+		}
+
+		gender := ""
+		if rowsData.Gender.Valid {
+			gender = rowsData.Gender.String
+		}
+
+		var birthDate time.Time
+		if rowsData.BirthDate.Valid {
+			bd := rowsData.BirthDate.String
+			birthDate, err = time.Parse(time.RFC3339, bd)
+			if err != nil {
+				result <- query.QueryResult{Error: err}
+			}
+		}
+
 		userRead = storage.UserRead{
 			UID:             userUID,
 			Email:           rowsData.Email,
-			Password:        []byte(rowsData.Password),
+			Password:        []byte(password),
 			Role:            rowsData.Role,
 			Status:          rowsData.Status,
+			Name:            name,
+			Gender:          gender,
+			BirthDate:       birthDate,
 			InvitationCode:  rowsData.InvitationCode,
 			OrganizationUID: orgUID,
 			CreatedDate:     rowsData.CreatedDate,
@@ -118,10 +152,15 @@ func (s UserReadQueryMysql) FindByEmail(email string) <-chan query.QueryResult {
 			result <- query.QueryResult{Error: err}
 		}
 
+		password := ""
+		if rowsData.Password.Valid {
+			password = rowsData.Password.String
+		}
+
 		userRead = storage.UserRead{
 			UID:         userUID,
 			Email:       rowsData.Email,
-			Password:    []byte(rowsData.Password),
+			Password:    []byte(password),
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,
 		}
@@ -157,7 +196,12 @@ func (s UserReadQueryMysql) FindByEmailAndPassword(email, password string) <-cha
 			result <- query.QueryResult{Result: userRead}
 		}
 
-		err = bcrypt.CompareHashAndPassword([]byte(rowsData.Password), []byte(password))
+		pwd := ""
+		if rowsData.Password.Valid {
+			pwd = rowsData.Password.String
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(pwd), []byte(password))
 		if err != nil {
 			result <- query.QueryResult{Result: userRead}
 		}
@@ -170,7 +214,7 @@ func (s UserReadQueryMysql) FindByEmailAndPassword(email, password string) <-cha
 		userRead = storage.UserRead{
 			UID:         userUID,
 			Email:       rowsData.Email,
-			Password:    []byte(rowsData.Password),
+			Password:    []byte(pwd),
 			CreatedDate: rowsData.CreatedDate,
 			LastUpdated: rowsData.LastUpdated,
 		}

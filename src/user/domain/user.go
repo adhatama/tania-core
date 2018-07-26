@@ -15,12 +15,16 @@ type User struct {
 	Password          []byte
 	Role              string
 	Status            string
-	Name              string
 	OrganizationUID   uuid.UUID
 	InvitationCode    int
 	ResetPasswordCode int
-	CreatedDate       time.Time
-	LastUpdated       time.Time
+
+	Name      string
+	Gender    string
+	BirthDate time.Time
+
+	CreatedDate time.Time
+	LastUpdated time.Time
 
 	// Events
 	Version            int
@@ -44,6 +48,7 @@ const (
 const (
 	UserStatusPendingConfirmation = "PENDING_CONFIRMATION"
 	UserStatusConfirmed           = "CONFIRMED"
+	UserStatusCompleted           = "COMPLETED"
 )
 
 func (state *User) TrackChange(event interface{}) {
@@ -70,6 +75,8 @@ func (state *User) Transition(event interface{}) {
 
 	case UserProfileChanged:
 		state.Name = e.Name
+		state.Gender = e.Gender
+		state.BirthDate = e.BirthDate
 
 	case UserVerified:
 		state.Status = e.Status
@@ -77,16 +84,19 @@ func (state *User) Transition(event interface{}) {
 	case ResetPasswordRequested:
 		state.ResetPasswordCode = e.ResetPasswordCode
 
+	case InitialUserProfileSet:
+		state.Name = e.Name
+		state.Gender = e.Gender
+		state.BirthDate = e.BirthDate
+		state.Password = e.Password
+		state.Status = e.Status
+		state.LastUpdated = e.DateChanged
 	}
 }
 
-func CreateUser(userService UserService, organizationUID uuid.UUID, email, password, role string) (*User, error) {
+func CreateUser(userService UserService, organizationUID uuid.UUID, email, role string) (*User, error) {
 	if email == "" {
-		return nil, UserError{UserErrorUsernameEmptyCode}
-	}
-
-	if len(email) < 5 {
-		return nil, UserError{UserErrorInvalidUsernameLengthCode}
+		return nil, UserError{UserErrorEmailEmptyCode}
 	}
 
 	userResult, err := userService.FindUserByEmail(email)
@@ -95,13 +105,13 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, passw
 	}
 
 	if userResult.UID != (uuid.UUID{}) {
-		return nil, UserError{UserErrorUsernameExistsCode}
+		return nil, UserError{UserErrorEmailExistsCode}
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
-	}
+	// hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	uid, err := uuid.NewV4()
 	if err != nil {
@@ -125,7 +135,6 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, passw
 	user := &User{
 		UID:             uid,
 		Email:           email,
-		Password:        hash,
 		OrganizationUID: organizationUID,
 		InvitationCode:  code,
 		Role:            role,
@@ -183,14 +192,59 @@ func (u *User) IsPasswordValid(password string) (bool, error) {
 	return true, nil
 }
 
-func (u *User) ChangeProfile(name string) error {
+func (u *User) ChangeProfile(name, gender string, birthDate time.Time) error {
 	if name == "" {
 		return errors.New("Name cannot be empty")
 	}
 
+	if gender == "" {
+		return errors.New("Gender cannot be empty")
+	}
+
+	if birthDate == (time.Time{}) {
+		return errors.New("Birth Date cannot be empty")
+	}
+
 	u.TrackChange(UserProfileChanged{
-		UID:  u.UID,
-		Name: name,
+		UID:       u.UID,
+		Name:      name,
+		Gender:    gender,
+		BirthDate: birthDate,
+	})
+
+	return nil
+}
+
+func (u *User) SetInitialUserProfile(name, gender string, birthDate time.Time, password string) error {
+	if u.Status == UserStatusCompleted {
+		return errors.New("User profile cannot be changed from here because the values are already filled")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	if name == "" {
+		return errors.New("Name cannot be empty")
+	}
+
+	if gender == "" {
+		return errors.New("Gender cannot be empty")
+	}
+
+	if birthDate == (time.Time{}) {
+		return errors.New("Birth Date cannot be empty")
+	}
+
+	u.TrackChange(InitialUserProfileSet{
+		UID:         u.UID,
+		Name:        name,
+		Gender:      gender,
+		BirthDate:   birthDate,
+		Password:    hash,
+		Status:      UserStatusCompleted,
+		DateChanged: time.Now(),
 	})
 
 	return nil

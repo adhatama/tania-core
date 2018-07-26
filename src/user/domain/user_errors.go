@@ -6,27 +6,24 @@ type UserError struct {
 }
 
 const (
-	UserErrorUsernameEmptyCode = iota
-	UserErrorInvalidUsernameLengthCode
+	UserErrorEmailEmptyCode = iota
 	UserErrorPasswordEmptyCode
 	UserErrorWrongPasswordCode
-	UserErrorUsernameExistsCode
+	UserErrorEmailExistsCode
 	UserErrorPasswordConfirmationNotMatchCode
 	UserChangePasswordErrorWrongOldPasswordCode
 )
 
 func (e UserError) Error() string {
 	switch e.Code {
-	case UserErrorUsernameEmptyCode:
-		return "Username cannot be empty"
-	case UserErrorInvalidUsernameLengthCode:
-		return "Username is too short"
+	case UserErrorEmailEmptyCode:
+		return "Email cannot be empty"
 	case UserErrorPasswordEmptyCode:
 		return "Password cannot be empty"
 	case UserErrorWrongPasswordCode:
 		return "Wrong password"
-	case UserErrorUsernameExistsCode:
-		return "Username already exists"
+	case UserErrorEmailExistsCode:
+		return "Email already exists"
 	case UserErrorPasswordConfirmationNotMatchCode:
 		return "Password confirmation didn't match"
 	case UserChangePasswordErrorWrongOldPasswordCode:

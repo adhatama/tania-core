@@ -25,8 +25,10 @@ type PasswordChanged struct {
 }
 
 type UserProfileChanged struct {
-	UID  uuid.UUID
-	Name string
+	UID       uuid.UUID
+	Name      string
+	Gender    string
+	BirthDate time.Time
 }
 
 type UserVerified struct {
@@ -39,4 +41,14 @@ type ResetPasswordRequested struct {
 	UID               uuid.UUID
 	Email             string
 	ResetPasswordCode int
+}
+
+type InitialUserProfileSet struct {
+	UID         uuid.UUID
+	Name        string
+	Gender      string
+	BirthDate   time.Time
+	Password    []byte
+	Status      string
+	DateChanged time.Time
 }

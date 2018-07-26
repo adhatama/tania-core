@@ -100,6 +100,7 @@ func (s *UserServer) InitSubscriber() {
 	s.EventBus.Subscribe("UserVerified", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("ResetPasswordRequested", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordResetVerified", s.SaveToUserReadModel)
+	s.EventBus.Subscribe("InitialUserProfileSet", s.SaveToUserReadModel)
 
 	s.EventBus.Subscribe("UserCreated", s.SaveToAuthModel)
 }

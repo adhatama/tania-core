@@ -7,6 +7,7 @@ import (
 	"net/smtp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Tanibox/tania-core/config"
 	"github.com/Tanibox/tania-core/src/eventbus"
@@ -103,14 +104,17 @@ func (s *AuthServer) InitSubscriber() {
 func (s *AuthServer) Mount(g *echo.Group) {
 	g.POST("authorize", s.Authorize)
 
-	g.POST("register/organization", s.RegisterOrganization)
-	g.POST("organization/verification", s.VerifyOrganization)
-	g.POST("organization/profile/:id", s.EditOrganizationProfile)
-	g.GET("organization/email/:email", s.CheckOrganizationEmail)
-	g.GET("organization", s.GetAllOrganization)
+	// For organization registration
+	g.GET("registration/organization/email/:email", s.CheckOrganizationEmail)
+	g.POST("registration/organization", s.RegisterOrganization)
+	g.POST("registration/organization/verification", s.VerifyOrganization)
+	g.PUT("registration/organization/:id", s.EditOrganizationProfile)
 
-	g.POST("register/user", s.RegisterUser)
-	g.POST("user/verification", s.VerifyUser)
+	// For user registration
+	g.GET("organization", s.GetAllOrganization)
+	g.POST("registration/user/verification", s.VerifyUser)
+	g.PUT("registration/user/:id", s.EditUserProfile)
+
 	g.POST("forgot_password", s.ForgotPassword)
 	g.POST("reset_password", s.ResetPassword)
 }
@@ -259,7 +263,7 @@ func (s *AuthServer) VerifyOrganization(c echo.Context) error {
 		return Error(c, errors.New("Organization is already confirmed"))
 	}
 
-	// Process
+	// Process Organization
 	eventQueryResult := <-s.OrganizationEventQuery.FindAllByID(orgRead.UID)
 	if eventQueryResult.Error != nil {
 		return Error(c, eventQueryResult.Error)
@@ -278,10 +282,22 @@ func (s *AuthServer) VerifyOrganization(c echo.Context) error {
 		return Error(c, err)
 	}
 
+	// Process User Admin
+	user, err := domain.CreateUser(s.UserService, org.UID, org.Email, domain.UserRoleAdmin)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	err = <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if err != nil {
+		return Error(c, err)
+	}
+
 	s.publishUncommittedEvents(org)
+	s.publishUncommittedEvents(user)
 
 	data := make(map[string]interface{})
-	data["data"] = MapToOrganizationRead(org)
+	data["data"] = MapOrganizationWithUser(org, user)
 
 	return c.JSON(http.StatusOK, data)
 }
@@ -340,22 +356,60 @@ func (s *AuthServer) EditOrganizationProfile(c echo.Context) error {
 	return c.JSON(http.StatusOK, data)
 }
 
-func (s *AuthServer) RegisterUser(c echo.Context) error {
-	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
+func (s *AuthServer) EditUserProfile(c echo.Context) error {
+	userUID, err := uuid.FromString(c.Param("id"))
 	if err != nil {
 		return Error(c, err)
 	}
 
-	email := c.FormValue("email")
+	name := c.FormValue("name")
+	gender := c.FormValue("gender")
+	birthDate, err := time.Parse("2006-01-02", c.FormValue("birth_date"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	queryResult := <-s.UserReadQuery.FindByID(userUID)
+	if queryResult.Error != nil {
+		return Error(c, queryResult.Error)
+	}
+
+	userRead, ok := queryResult.Result.(storage.UserRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if userRead.UID == (uuid.UUID{}) {
+		return Error(c, NewRequestValidationError(NOT_FOUND, "user_id"))
+	}
+
+	if userRead.Password != nil || userRead.Status == domain.UserStatusCompleted {
+		return Error(c, errors.New("User profile has been initiated"))
+	}
+
 	password := c.FormValue("password")
 	confirmPassword := c.FormValue("confirm_password")
-	role := c.FormValue("role")
 
+	if password == "" {
+		return Error(c, NewRequestValidationError(REQUIRED, "password"))
+	}
+	if confirmPassword == "" {
+		return Error(c, NewRequestValidationError(REQUIRED, "confirm_password"))
+	}
 	if password != confirmPassword {
 		return Error(c, errors.New("Confirm password didn't match"))
 	}
 
-	user, err := domain.CreateUser(s.UserService, organizationUID, email, password, role)
+	// Process
+	eventQueryResult := <-s.UserEventQuery.FindAllByID(userRead.UID)
+	if eventQueryResult.Error != nil {
+		return Error(c, eventQueryResult.Error)
+	}
+
+	events := eventQueryResult.Result.([]storage.UserEvent)
+	user := repository.NewUserFromHistory(events)
+
+	err = user.SetInitialUserProfile(name, gender, birthDate, password)
 	if err != nil {
 		return Error(c, err)
 	}
@@ -367,7 +421,7 @@ func (s *AuthServer) RegisterUser(c echo.Context) error {
 
 	s.publishUncommittedEvents(user)
 
-	data := make(map[string]storage.UserRead)
+	data := make(map[string]interface{})
 	data["data"] = MapToUserRead(user)
 
 	return c.JSON(http.StatusOK, data)
@@ -572,6 +626,9 @@ func (s *AuthServer) CheckOrganizationEmail(c echo.Context) error {
 	}
 
 	data["data"] = orgSimple
+	if orgSimple.UID == (uuid.UUID{}) {
+		data["data"] = nil
+	}
 
 	return c.JSON(http.StatusOK, data)
 }

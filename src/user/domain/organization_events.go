@@ -21,6 +21,7 @@ type OrganizationProfileChanged struct {
 	TotalMember string
 	Province    string
 	City        string
+	Status      string
 }
 
 type OrganizationVerified struct {
