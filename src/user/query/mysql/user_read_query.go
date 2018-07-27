@@ -197,12 +197,12 @@ func (s UserReadQueryMysql) FindByEmailAndPassword(email, password string) <-cha
 			result <- query.QueryResult{Result: userRead}
 		}
 
-		pwd := ""
+		var pwd []byte
 		if rowsData.Password.Valid {
-			pwd = rowsData.Password.String
+			pwd = []byte(rowsData.Password.String)
 		}
 
-		err = bcrypt.CompareHashAndPassword([]byte(pwd), []byte(password))
+		err = bcrypt.CompareHashAndPassword(pwd, []byte(password))
 		if err != nil {
 			result <- query.QueryResult{Result: userRead}
 		}
