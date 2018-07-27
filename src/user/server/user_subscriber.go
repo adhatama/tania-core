@@ -138,9 +138,9 @@ func (s *UserServer) SaveToUserReadModel(event interface{}) error {
 
 		userRead = &u
 
-		userRead.Name = e.Name
-		userRead.Gender = e.Gender
-		userRead.BirthDate = e.BirthDate
+		userRead.Name = &e.Name
+		userRead.Gender = &e.Gender
+		userRead.BirthDate = &e.BirthDate
 		userRead.Status = e.Status
 		userRead.LastUpdated = e.DateChanged
 		userRead.Password = e.Password

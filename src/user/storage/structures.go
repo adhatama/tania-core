@@ -21,9 +21,9 @@ type UserRead struct {
 	Status          string    `json:"status"`
 	OrganizationUID uuid.UUID `json:"organization_uid"`
 
-	Name      string    `json:"name"`
-	Gender    string    `json:"gender"`
-	BirthDate time.Time `json:"birth_date"`
+	Name      *string    `json:"name"`
+	Gender    *string    `json:"gender"`
+	BirthDate *time.Time `json:"birth_date"`
 
 	InvitationCode    int `json:"-"`
 	ResetPasswordCode int `json:"-"`

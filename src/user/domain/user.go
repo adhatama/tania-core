@@ -19,9 +19,9 @@ type User struct {
 	InvitationCode    int
 	ResetPasswordCode int
 
-	Name      string
-	Gender    string
-	BirthDate time.Time
+	Name      *string
+	Gender    *string
+	BirthDate *time.Time
 
 	CreatedDate time.Time
 	LastUpdated time.Time
@@ -74,9 +74,9 @@ func (state *User) Transition(event interface{}) {
 		state.LastUpdated = e.DateChanged
 
 	case UserProfileChanged:
-		state.Name = e.Name
-		state.Gender = e.Gender
-		state.BirthDate = e.BirthDate
+		state.Name = &e.Name
+		state.Gender = &e.Gender
+		state.BirthDate = &e.BirthDate
 
 	case UserVerified:
 		state.Status = e.Status
@@ -85,9 +85,9 @@ func (state *User) Transition(event interface{}) {
 		state.ResetPasswordCode = e.ResetPasswordCode
 
 	case InitialUserProfileSet:
-		state.Name = e.Name
-		state.Gender = e.Gender
-		state.BirthDate = e.BirthDate
+		state.Name = &e.Name
+		state.Gender = &e.Gender
+		state.BirthDate = &e.BirthDate
 		state.Password = e.Password
 		state.Status = e.Status
 		state.LastUpdated = e.DateChanged

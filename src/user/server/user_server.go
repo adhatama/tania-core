@@ -107,7 +107,52 @@ func (s *UserServer) InitSubscriber() {
 
 // Mount defines the UserServer's endpoints with its handlers
 func (s *UserServer) Mount(g *echo.Group) {
+	g.POST("/invitation", s.InviteUser)
 	g.POST("/change_password", s.ChangePassword)
+}
+
+func (s *UserServer) InviteUser(c echo.Context) error {
+	organizationUID, err := uuid.FromString(c.FormValue("organization_id"))
+	if err != nil {
+		return Error(c, err)
+	}
+
+	email := c.FormValue("email")
+
+	queryResult := <-s.UserReadQuery.FindByEmail(email)
+	if queryResult.Error != nil {
+		return queryResult.Error
+	}
+
+	userRead, ok := queryResult.Result.(storage.UserRead)
+	if !ok {
+		return Error(c, errors.New("Error type assertion"))
+	}
+
+	if userRead.UID != (uuid.UUID{}) {
+		return Error(c, errors.New("Email is already used"))
+	}
+
+	// Process
+	user, err := domain.CreateUser(s.UserService, organizationUID, email, domain.UserRoleUser)
+	if err != nil {
+		return Error(c, err)
+	}
+
+	// Persists //
+	resultSave := <-s.UserEventRepo.Save(user.UID, user.Version, user.UncommittedChanges)
+	if resultSave != nil {
+		return Error(c, echo.NewHTTPError(http.StatusInternalServerError, "Internal server error"))
+	}
+
+	// Publish //
+	s.publishUncommittedEvents(user)
+
+	data := make(map[string]storage.UserRead)
+	data["data"] = MapToUserRead(user)
+
+	return c.JSON(http.StatusOK, data)
+
 }
 
 func (s *UserServer) ChangePassword(c echo.Context) error {

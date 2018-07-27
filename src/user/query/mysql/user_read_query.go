@@ -77,25 +77,26 @@ func (s UserReadQueryMysql) FindByID(uid uuid.UUID) <-chan query.QueryResult {
 			result <- query.QueryResult{Error: err}
 		}
 
-		password := ""
+		var password []byte
 		if rowsData.Password.Valid {
-			password = rowsData.Password.String
+			password = []byte(rowsData.Password.String)
 		}
 
-		name := ""
+		var name *string
 		if rowsData.Name.Valid {
-			name = rowsData.Name.String
+			name = &rowsData.Name.String
 		}
 
-		gender := ""
+		var gender *string
 		if rowsData.Gender.Valid {
-			gender = rowsData.Gender.String
+			gender = &rowsData.Gender.String
 		}
 
-		var birthDate time.Time
+		var birthDate *time.Time
 		if rowsData.BirthDate.Valid {
 			bd := rowsData.BirthDate.String
-			birthDate, err = time.Parse(time.RFC3339, bd)
+			bdTime, err := time.Parse(time.RFC3339, bd)
+			birthDate = &bdTime
 			if err != nil {
 				result <- query.QueryResult{Error: err}
 			}

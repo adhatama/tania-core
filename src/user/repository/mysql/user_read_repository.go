@@ -48,7 +48,7 @@ func (f *UserReadRepositoryMysql) Save(userRead *storage.UserRead) <-chan error 
 				VALUES (?, ?, ?, ?, ?, ?, ?, ? ,?, ?, ?, ?, ?)`,
 				userRead.UID.Bytes(), userRead.Email, userRead.Password,
 				userRead.Role, userRead.Status, userRead.OrganizationUID.Bytes(), userRead.InvitationCode,
-				userRead.Name, userRead.Gender, userRead.BirthDate,
+				&userRead.Name, &userRead.Gender, &userRead.BirthDate,
 				userRead.ResetPasswordCode, userRead.CreatedDate, userRead.LastUpdated)
 
 			if err != nil {
