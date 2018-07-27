@@ -2,7 +2,11 @@ package server
 
 import (
 	"errors"
+	"net/smtp"
+	"strconv"
+	"strings"
 
+	"github.com/Tanibox/tania-core/config"
 	"github.com/Tanibox/tania-core/src/user/domain"
 	"github.com/Tanibox/tania-core/src/user/storage"
 	"github.com/labstack/gommon/log"
@@ -68,10 +72,18 @@ func (s *UserServer) SaveToUserReadModel(event interface{}) error {
 	userRead := &storage.UserRead{}
 
 	switch e := event.(type) {
-	case domain.UserCreated:
+	case domain.UserAdminCreated:
 		userRead.UID = e.UID
 		userRead.Email = e.Email
-		userRead.Password = e.Password
+		userRead.Role = e.Role
+		userRead.Status = e.Status
+		userRead.OrganizationUID = e.OrganizationUID
+		userRead.CreatedDate = e.CreatedDate
+		userRead.LastUpdated = e.LastUpdated
+
+	case domain.UserInvited:
+		userRead.UID = e.UID
+		userRead.Email = e.Email
 		userRead.Role = e.Role
 		userRead.Status = e.Status
 		userRead.InvitationCode = e.InvitationCode
@@ -159,10 +171,10 @@ func (s *UserServer) SaveToAuthModel(event interface{}) error {
 	userAuth := &storage.UserAuth{}
 
 	switch e := event.(type) {
-	case domain.UserCreated:
+	case domain.InitialUserProfileSet:
 		userAuth.UserUID = e.UID
-		userAuth.CreatedDate = e.CreatedDate
-		userAuth.LastUpdated = e.LastUpdated
+		userAuth.CreatedDate = e.DateChanged
+		userAuth.LastUpdated = e.DateChanged
 
 		// Generate access token here
 		// We use uuid method temporarily until we find better method
@@ -177,6 +189,45 @@ func (s *UserServer) SaveToAuthModel(event interface{}) error {
 	err := <-s.UserAuthRepo.Save(userAuth)
 	if err != nil {
 		log.Error(err)
+	}
+
+	return nil
+}
+
+func (s *UserServer) SendEmailSubscriber(event interface{}) error {
+	// Set up authentication information.
+	auth := smtp.PlainAuth(
+		"",
+		*config.Config.MailUsername,
+		*config.Config.MailPassword,
+		*config.Config.MailHost,
+	)
+
+	recipients := []string{}
+	code := ""
+	subject := ""
+	switch e := event.(type) {
+	case domain.UserInvited:
+		subject = "Tania Kode Verifikasi untuk Pendaftaran Pengguna Baru"
+		recipients = append(recipients, e.Email)
+		code = strconv.Itoa(e.InvitationCode)
+	}
+
+	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
+		"To: " + strings.Join(recipients, ",") + "\r\n" +
+		"Subject: " + subject + "\r\n\r\n" +
+		"Kode undangan Anda adalah " + code
+
+	err := smtp.SendMail(
+		*config.Config.MailHost+":"+strconv.Itoa(*config.Config.MailPort),
+		auth,
+		*config.Config.MailSender,
+		recipients,
+		[]byte(composedMsg),
+	)
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 
 	return nil

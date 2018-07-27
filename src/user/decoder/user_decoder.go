@@ -31,8 +31,18 @@ func (w *UserEventWrapper) UnmarshalJSON(b []byte) error {
 	)
 
 	switch wrapper.EventName {
-	case "UserCreated":
-		e := domain.UserCreated{}
+	case "UserAdminCreated":
+		e := domain.UserAdminCreated{}
+
+		_, err := Decode(f, &mapped, &e)
+		if err != nil {
+			return err
+		}
+
+		w.EventData = e
+
+	case "UserInvited":
+		e := domain.UserInvited{}
 
 		_, err := Decode(f, &mapped, &e)
 		if err != nil {

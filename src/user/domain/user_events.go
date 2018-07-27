@@ -6,10 +6,19 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type UserCreated struct {
+type UserAdminCreated struct {
 	UID             uuid.UUID
 	Email           string
-	Password        []byte
+	OrganizationUID uuid.UUID
+	Role            string
+	Status          string
+	CreatedDate     time.Time
+	LastUpdated     time.Time
+}
+
+type UserInvited struct {
+	UID             uuid.UUID
+	Email           string
 	OrganizationUID uuid.UUID
 	InvitationCode  int
 	Role            string

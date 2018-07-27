@@ -30,11 +30,11 @@ type Configuration struct {
 	ClientID               *string   `mapstructure:"client_id"`
 
 	// Mail server configuration
-	MailHost     *string
-	MailPort     *int
-	MailUsername *string
-	MailPassword *string
-	MailSender   *string
+	MailHost     *string `mapstructure:"mail_host"`
+	MailPort     *int    `mapstructure:"mail_port"`
+	MailUsername *string `mapstructure:"mail_username"`
+	MailPassword *string `mapstructure:"mail_password"`
+	MailSender   *string `mapstructure:"mail_sender"`
 }
 
 /*

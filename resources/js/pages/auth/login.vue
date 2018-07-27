@@ -9,12 +9,12 @@
           .panel-body
             form(@submit.prevent="validateBeforeSubmit")
               .form-group(:class="{ 'control': true }")
-                label#label-username Username
-                input.form-control#username(type="text" v-validate="'required'" :class="{'input': true, 'text-danger': errors.has('username') }" placeholder="Please input username" v-model="username" name="username")
-                span.help-block.text-danger(v-show="errors.has('username')") {{ errors.first('username') }}
+                label#label-email Email
+                input.form-control#email(type="text" v-validate="'required'" :class="{'input': true, 'text-danger': errors.has('email') }" placeholder="Please input email" v-model="email" name="email")
+                span.help-block.text-danger(v-show="errors.has('email')") {{ errors.first('email') }}
               .form-group(:class="{ 'control': true }")
                 label#label-password Password
-                input.form-control#password(type="password" v-validate="'required'" :class="{'input': true, 'text-danger': errors.has('password') }" placeholder="Please input username" v-model="password" name="password")
+                input.form-control#password(type="password" v-validate="'required'" :class="{'input': true, 'text-danger': errors.has('password') }" placeholder="Please input password" v-model="password" name="password")
                 span.help-block.text-danger(v-show="errors.has('password')") {{ errors.first('password') }}
               .form-group.text-center.m-t
                   button.btn.btn-addon.btn-primary(type="submit")
@@ -30,7 +30,7 @@ export default {
 
   data () {
     return {
-      username: '',
+      email: '',
       password: ''
     }
   },
@@ -66,14 +66,14 @@ export default {
     },
     login () {
       this.userLogin({
-        username: this.username,
+        email: this.email,
         password: this.password,
         client_id: process.env.CLIENT_ID,
         response_type: 'token',
         redirect_uri: location.protocol+"//"+location.host,
         state: 'random-string',
       }).then(this.redirector)
-      .catch(() => this.$toasted.error('Incorrect Username and/or password'))
+      .catch(() => this.$toasted.error('Incorrect Email and/or password'))
     },
     redirector (response) {
       Promise.all([

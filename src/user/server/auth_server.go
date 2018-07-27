@@ -283,7 +283,7 @@ func (s *AuthServer) VerifyOrganization(c echo.Context) error {
 	}
 
 	// Process User Admin
-	user, err := domain.CreateUser(s.UserService, org.UID, org.Email, domain.UserRoleAdmin)
+	user, err := domain.CreateUserAdmin(s.UserService, org.UID, org.Email)
 	if err != nil {
 		return Error(c, err)
 	}

@@ -58,10 +58,18 @@ func (state *User) TrackChange(event interface{}) {
 
 func (state *User) Transition(event interface{}) {
 	switch e := event.(type) {
-	case UserCreated:
+	case UserAdminCreated:
 		state.UID = e.UID
 		state.Email = e.Email
-		state.Password = e.Password
+		state.Role = e.Role
+		state.Status = e.Status
+		state.OrganizationUID = e.OrganizationUID
+		state.CreatedDate = e.CreatedDate
+		state.LastUpdated = e.LastUpdated
+
+	case UserInvited:
+		state.UID = e.UID
+		state.Email = e.Email
 		state.Role = e.Role
 		state.Status = e.Status
 		state.InvitationCode = e.InvitationCode
@@ -94,7 +102,7 @@ func (state *User) Transition(event interface{}) {
 	}
 }
 
-func CreateUser(userService UserService, organizationUID uuid.UUID, email, role string) (*User, error) {
+func CreateUserAdmin(userService UserService, organizationUID uuid.UUID, email string) (*User, error) {
 	if email == "" {
 		return nil, UserError{UserErrorEmailEmptyCode}
 	}
@@ -108,10 +116,47 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, role 
 		return nil, UserError{UserErrorEmailExistsCode}
 	}
 
-	// hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
+	user := &User{
+		UID:             uid,
+		Email:           email,
+		OrganizationUID: organizationUID,
+		Role:            UserRoleAdmin,
+		Status:          UserStatusConfirmed,
+	}
+
+	now := time.Now()
+
+	user.TrackChange(UserAdminCreated{
+		UID:             user.UID,
+		Email:           user.Email,
+		OrganizationUID: user.OrganizationUID,
+		Role:            user.Role,
+		Status:          user.Status,
+		CreatedDate:     now,
+		LastUpdated:     now,
+	})
+
+	return user, nil
+}
+
+func InviteUser(userService UserService, organizationUID uuid.UUID, email string) (*User, error) {
+	if email == "" {
+		return nil, UserError{UserErrorEmailEmptyCode}
+	}
+
+	userResult, err := userService.FindUserByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if userResult.UID != (uuid.UUID{}) {
+		return nil, UserError{UserErrorEmailExistsCode}
+	}
 
 	uid, err := uuid.NewV4()
 	if err != nil {
@@ -122,31 +167,20 @@ func CreateUser(userService UserService, organizationUID uuid.UUID, email, role 
 	rand.Seed(time.Now().UnixNano())
 	code := 100000 + rand.Intn(900000)
 
-	status := ""
-	switch role {
-	case UserRoleAdmin:
-		status = UserStatusConfirmed
-	case UserRoleUser:
-		status = UserStatusPendingConfirmation
-	default:
-		return nil, errors.New("Role not found")
-	}
-
 	user := &User{
 		UID:             uid,
 		Email:           email,
 		OrganizationUID: organizationUID,
 		InvitationCode:  code,
-		Role:            role,
-		Status:          status,
+		Role:            UserRoleUser,
+		Status:          UserStatusPendingConfirmation,
 	}
 
 	now := time.Now()
 
-	user.TrackChange(UserCreated{
+	user.TrackChange(UserInvited{
 		UID:             user.UID,
 		Email:           user.Email,
-		Password:        user.Password,
 		OrganizationUID: user.OrganizationUID,
 		InvitationCode:  user.InvitationCode,
 		Role:            user.Role,

@@ -25,13 +25,12 @@ const actions = {
         .ApiLogin(payload).then(function(data) {
           commit(types.USER_LOGIN, {
             uid: 1,
-            username: payload.username,
-            email: 'hello@tanibox.com',
-            intro: payload.username === 'user' ? false: true
+            email: payload.email,
+            intro: payload.email === 'user' ? false: true
           })
           resolve(data)
         }).catch(function() {
-          reject('Incorrect Username and/or password')
+          reject('Incorrect Email and/or password')
         })
     })
   },
@@ -56,8 +55,8 @@ const actions = {
 }
 
 const mutations = {
-  [types.USER_LOGIN] (state, { uid, username, email, intro }) {
-    state.current = { uid, username, email, intro }
+  [types.USER_LOGIN] (state, { uid, email, intro }) {
+    state.current = { uid, email, intro }
   },
   [types.USER_COMPLETED_INTRO] (state) {
     state.current.intro = false

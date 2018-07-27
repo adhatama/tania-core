@@ -95,14 +95,17 @@ func (s *UserServer) InitSubscriber() {
 	s.EventBus.Subscribe("OrganizationVerified", s.SaveToOrganizationReadModel)
 	s.EventBus.Subscribe("OrganizationProfileChanged", s.SaveToOrganizationReadModel)
 
-	s.EventBus.Subscribe("UserCreated", s.SaveToUserReadModel)
+	s.EventBus.Subscribe("UserAdminCreated", s.SaveToUserReadModel)
+	s.EventBus.Subscribe("UserInvited", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordChanged", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("UserVerified", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("ResetPasswordRequested", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("PasswordResetVerified", s.SaveToUserReadModel)
 	s.EventBus.Subscribe("InitialUserProfileSet", s.SaveToUserReadModel)
 
-	s.EventBus.Subscribe("UserCreated", s.SaveToAuthModel)
+	s.EventBus.Subscribe("InitialUserProfileSet", s.SaveToAuthModel)
+
+	s.EventBus.Subscribe("UserInvited", s.SendEmailSubscriber)
 }
 
 // Mount defines the UserServer's endpoints with its handlers
@@ -134,7 +137,7 @@ func (s *UserServer) InviteUser(c echo.Context) error {
 	}
 
 	// Process
-	user, err := domain.CreateUser(s.UserService, organizationUID, email, domain.UserRoleUser)
+	user, err := domain.InviteUser(s.UserService, organizationUID, email)
 	if err != nil {
 		return Error(c, err)
 	}
