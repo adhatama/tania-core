@@ -98,6 +98,7 @@ func NewAuthServer(
 // InitSubscriber defines the mapping of which event this domain listen with their handler
 func (s *AuthServer) InitSubscriber() {
 	s.EventBus.Subscribe("OrganizationCreated", s.SendEmailSubscriber)
+	s.EventBus.Subscribe("ResetPasswordRequested", s.SendEmailSubscriber)
 }
 
 // Mount defines the AuthServer's endpoints with its handlers
@@ -692,6 +693,11 @@ func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
 		subject = "Tania Kode Verifikasi untuk Pendaftaran Organisasi Baru"
 		recipients = append(recipients, e.Email)
 		code = strconv.Itoa(e.VerificationCode)
+
+	case domain.ResetPasswordRequested:
+		subject = "Tania Kode Verifikasi untuk Lupa Password"
+		recipients = append(recipients, e.Email)
+		code = strconv.Itoa(e.ResetPasswordCode)
 	}
 
 	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
