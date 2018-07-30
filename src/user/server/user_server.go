@@ -105,7 +105,9 @@ func (s *UserServer) InitSubscriber() {
 
 	s.EventBus.Subscribe("InitialUserProfileSet", s.SaveToAuthModel)
 
+	s.EventBus.Subscribe("OrganizationCreated", s.SendEmailSubscriber)
 	s.EventBus.Subscribe("UserInvited", s.SendEmailSubscriber)
+	s.EventBus.Subscribe("ResetPasswordRequested", s.SendEmailSubscriber)
 }
 
 // Mount defines the UserServer's endpoints with its handlers

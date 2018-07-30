@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"net/smtp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Tanibox/tania-core/config"
@@ -22,7 +20,6 @@ import (
 	repoSqlite "github.com/Tanibox/tania-core/src/user/repository/sqlite"
 	"github.com/Tanibox/tania-core/src/user/storage"
 	"github.com/labstack/echo"
-	"github.com/labstack/gommon/log"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -90,15 +87,7 @@ func NewAuthServer(
 
 	}
 
-	authServer.InitSubscriber()
-
 	return authServer, nil
-}
-
-// InitSubscriber defines the mapping of which event this domain listen with their handler
-func (s *AuthServer) InitSubscriber() {
-	s.EventBus.Subscribe("OrganizationCreated", s.SendEmailSubscriber)
-	s.EventBus.Subscribe("ResetPasswordRequested", s.SendEmailSubscriber)
 }
 
 // Mount defines the AuthServer's endpoints with its handlers
@@ -674,50 +663,6 @@ func (s *AuthServer) GetAllOrganization(c echo.Context) error {
 	data["data"] = simpleList
 
 	return c.JSON(http.StatusOK, data)
-}
-
-func (s *AuthServer) SendEmailSubscriber(event interface{}) error {
-	// Set up authentication information.
-	auth := smtp.PlainAuth(
-		"",
-		*config.Config.MailUsername,
-		*config.Config.MailPassword,
-		*config.Config.MailHost,
-	)
-
-	recipients := []string{}
-	code := ""
-	subject := ""
-	switch e := event.(type) {
-	case domain.OrganizationCreated:
-		subject = "Tania Kode Verifikasi untuk Pendaftaran Organisasi Baru"
-		recipients = append(recipients, e.Email)
-		code = strconv.Itoa(e.VerificationCode)
-
-	case domain.ResetPasswordRequested:
-		subject = "Tania Kode Verifikasi untuk Lupa Password"
-		recipients = append(recipients, e.Email)
-		code = strconv.Itoa(e.ResetPasswordCode)
-	}
-
-	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
-		"To: " + strings.Join(recipients, ",") + "\r\n" +
-		"Subject: " + subject + "\r\n\r\n" +
-		"Kode verifikasi Anda adalah " + code
-
-	err := smtp.SendMail(
-		*config.Config.MailHost+":"+strconv.Itoa(*config.Config.MailPort),
-		auth,
-		*config.Config.MailSender,
-		recipients,
-		[]byte(composedMsg),
-	)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	return nil
 }
 
 func (s *AuthServer) publishUncommittedEvents(entity interface{}) error {

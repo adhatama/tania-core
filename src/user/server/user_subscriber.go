@@ -204,19 +204,35 @@ func (s *UserServer) SendEmailSubscriber(event interface{}) error {
 	)
 
 	recipients := []string{}
-	code := ""
 	subject := ""
+	body := ""
 	switch e := event.(type) {
-	case domain.UserInvited:
-		subject = "Tania Kode Verifikasi untuk Pendaftaran Pengguna Baru"
+	case domain.OrganizationCreated:
+		subject = "Tania Kode Verifikasi untuk Pendaftaran Organisasi Baru"
 		recipients = append(recipients, e.Email)
-		code = strconv.Itoa(e.InvitationCode)
+
+		code := strconv.Itoa(e.VerificationCode)
+		body = "Kode verifikasi Anda adalah " + code
+
+	case domain.ResetPasswordRequested:
+		subject = "Tania Kode Verifikasi untuk Lupa Password"
+		recipients = append(recipients, e.Email)
+
+		code := strconv.Itoa(e.ResetPasswordCode)
+		body = "Kode verifikasi Anda adalah " + code
+
+	case domain.UserInvited:
+		subject = "Tania Kode Undangan untuk Pendaftaran Pengguna Baru"
+		recipients = append(recipients, e.Email)
+
+		code := strconv.Itoa(e.InvitationCode)
+		body = "Kode undangan Anda adalah " + code
 	}
 
 	composedMsg := "From: " + *config.Config.MailSender + "\r\n" +
 		"To: " + strings.Join(recipients, ",") + "\r\n" +
 		"Subject: " + subject + "\r\n\r\n" +
-		"Kode undangan Anda adalah " + code
+		body
 
 	err := smtp.SendMail(
 		*config.Config.MailHost+":"+strconv.Itoa(*config.Config.MailPort),
