@@ -19,7 +19,7 @@ type UserRead struct {
 	Password        []byte    `json:"-"`
 	Role            string    `json:"role"`
 	Status          string    `json:"status"`
-	OrganizationUID uuid.UUID `json:"organization_uid"`
+	OrganizationUID uuid.UUID `json:"organization_id"`
 
 	Name      *string    `json:"name"`
 	Gender    *string    `json:"gender"`
